@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 ---
 
-### Introductie
+## Introductie
 
 Perifere Bloed Mononucleaire Cellen (PBMC) zijn immuuncellen uit het bloed waar onder andere T-cellen, B-cellen en monocyten in zitten. Wanneer er zich in het lichaam kanker manifesteert kan dit gepaard gaan met veranderingen in het immuunsysteem. PBMC's zijn hierbij een geschikte maatstaf om na te gaan welke veranderingen er in het immuunsysteem hebben plaatsgevonden voor verder onderzoek. 
 
@@ -24,7 +24,7 @@ De verwachting is dat er mogelijk een hoger aandeel monocyten aanwezig zullen zi
 
 ---
 
-### Kwaliteitscontrole van single-cell data
+## Kwaliteitscontrole van single-cell data
 
 De readkwaliteit is over het algemeen heel goed. Per base sequence quality heeft in bijna elk monster een Q-score van 30+ (oftewel 99,9% nauwkeurigheid), wat standaard een benchmark is in next-generation sequencing voor base calling nauwkeurigheid. Er zijn 2 posities waar de kwaliteit duidelijk afneemt: bp 1 in monster I2 en bp 61–66 in monster R2. Ondanks deze uitschieters blijven de Q-scores hoger dan respectievelijk 25 en 30.
 
@@ -42,17 +42,17 @@ Keurige kwaliteitsscores over alle baseparen, met een Q-score van ongeveer 36, w
 
 De Q-scores zijn over het algemeen hoog. Rond bp 61–66 is een lichte daling zichtbaar, maar de Q-score blijft boven de 30+.
 
-![**Figuur 3: Adapter content in R1.**](figuren/adapter_content_R1.png){width=70%}
+![**Figuur 3: Adapter content in R1.**](figuren/adapter_content_R1.png){width=68%}
 
 Geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties over alle baseparen is 0%
 
-![**Figuur 4: Adapter content in R2.**](figuren/adapter_content_R2.png){width=70%}
+![**Figuur 4: Adapter content in R2.**](figuren/adapter_content_R2.png){width=68%}
 
 Ook hier geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties is 0%
 
 ---
 
-# Een countmatrix en een Seurat object aanmaken:
+## Een countmatrix en een Seurat object aanmaken:
 ```{r een countmatrix en een Seurat object aanmaken}
 
 # Load the libraries
