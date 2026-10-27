@@ -1,6 +1,6 @@
 ---
 title: "DAUR2 - Summatieve opdracht single-cell RNA-seq"
-author: "Nina en Alan"
+author: "Nina Songorzadeh en Alan Davliatov"
 date: "`r Sys.Date()`"
 output: html_document
 ---
@@ -26,33 +26,29 @@ De verwachting is dat er mogelijk een hoger aandeel monocyten aanwezig zullen zi
 
 ### Kwaliteitscontrole van single-cell data
 
-#### • Hoe is de read kwaliteit over de lengte van de reads? Let hierbij op de Q-scores.
+De readkwaliteit is over het algemeen heel goed. Per base sequence quality heeft in bijna elk monster een Q-score van 30+ (oftewel 99,9% nauwkeurigheid), wat standaard een benchmark is in next-generation sequencing voor base calling nauwkeurigheid. Er zijn 2 posities waar de kwaliteit duidelijk afneemt: bp 1 in monster I2 en bp 61–66 in monster R2. Ondanks deze uitschieters blijven de Q-scores hoger dan respectievelijk 25 en 30.
 
-Per base sequence quality heeft in bijna elk monster een Q-score van 30+ (oftewel 99.9% nauwkeurigheid), wat standard een benchmark is in next-generation sequencing voor base-calling nauwkeurigheid.
+Wat betreft adapter content, kan voor de samples I1 en I2 geen analyse worden uitgevoerd, omdat de readlengte te kort is. Bij dit soort indexreads (8–14 bp) worden ongebruikelijke patronen verwacht. Dit komt doordat deze reads uit vaste indexsequenties bestaan en die nemen we niet mee in onze beoordeling. Verder is er in de monsters R1 en R2 geen contaminatie gedetecteerd.
 
-#### • Zijn er posities waar de kwaliteit duidelijk afneemt?
+Er zijn verschillen in basecompositie tussen de bestanden binnen onze sample. Zo verschilt de per base sequence content sterk per basepaar in monster R2. Vooral de baseparen 49–90 vertonen een rare verdeling van 0–70%, terwijl R1 overal netjes tussen 20–30% blijft.
 
-Ja, basepaar 1 in monster l2 en basepaar 61-66 in monster R2, ondanks deze uitschieters zijn de Q-scores hoger dan 25 en 30 respectivelijk.
+De per sequence GC content is ook wat minder goed bij R2. De daadwerkelijke GC-verdeling in R2 is sterker geconcentreerd tussen 51–55% dan verwacht en komt daardoor minder goed overeen met wat FastQC verwacht. Dit is echter niet cruciaal voor onze analyse, maar wel goed om hiermee rekening te houden.
 
-#### • Zijn er adapter contaminaties of andere opvallende waarschuwingen?
+![**Figuur 1: Readkwaliteit in R1.**](figuren/read_quality_R1.png){width=70%}
 
-Voor de samples l1 en l2, kan geen adapter contaminatie worden geanalyseerd omdat de read lengte te kort is. In de monsters R1 en R2 is geen contaminatie gedetecteerd.
+Keurige kwaliteitsscores over alle baseparen, met een Q-score van ongeveer 36, wat overeenkomt met een kans op een fout van 0,025%
 
-#### • Zijn er verschillen tussen bestanden of reads binnen jullie sample?
+![**Figuur 2: Read kwaliteit in R2.**](figuren/read_quality_R2.png){width=70%}
 
-Ja, per base sequence content verschilt sterk per basepaar in monster R2. De baseparen 49-90 vertonen een rare verdeling van 0-70%, terwijl de R1 netjes tussen 20-30% blijft, wat goed is voor elk basepaar.
-Ook is de per sequence GC content wat minder goed bij R2. De daadwerkelijke GC-verdeling in R2 is sterker geconcentreerd tussen 51-55% dan verwacht en komt goed minder goed overeen met wat FastQC verwacht. Dit is echter niet cruciaal voor onze analyse, maar wel goed om hiermee rekening te houden. 
-Bij korte indexreads I1 en I2 (8-14 bp), worden ongebruikelijke patronen verwacht. Dit komt doordat deze reads uit vaste indexsequenties bestaan en die nemen we niet mee in onze beoordeling.
+De Q-scores zijn over het algemeen hoog. Rond bp 61–66 is een lichte daling zichtbaar, maar de Q-score blijft boven de 30+.
 
-#### • Ondersteun je antwoorden met enkele figuren uit de FastQC rapporten.
+![**Figuur 3: Adapter content in R1.**](figuren/adapter_content_R1.png){width=70%}
 
-![Figuur 1: Adapter content in R1.](figuren/adapter_content_R1.png)
+Geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties over alle baseparen is 0%
 
-![Figuur 2: Adapter content in R2.](figuren/adapter_content_R2.png)
+![**Figuur 4: Adapter content in R2.**](figuren/adapter_content_R2.png){width=70%}
 
-![Figuur 3: Read kwaliteit in R1.](figuren/read_quality_R1.png)
-
-![Figuur 4: Read kwaliteit in R2.](figuren/read_quality_R2.png)
+Ook hier geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties is 0%
 
 ---
 
