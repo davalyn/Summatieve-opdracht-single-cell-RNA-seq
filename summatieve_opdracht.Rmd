@@ -22,14 +22,36 @@ De verwachting is dat er mogelijk een hoger aandeel monocyten aanwezig zullen zi
 
 ### Kwaliteitscontrole van single-cell data
 
-• Hoe is de read kwaliteit over de lengte van de reads? Let hierbij op de Q-scores.
-• Zijn er posities waar de kwaliteit duidelijk afneemt?
-• Zijn er adapter contaminaties of andere opvallende waarschuwingen?
-• Zijn er verschillen tussen bestanden of reads binnen jullie sample?
-• Ondersteun je antwoorden met enkele figuren uit de FastQC rapporten.
+#### • Hoe is de read kwaliteit over de lengte van de reads? Let hierbij op de Q-scores.
+
+Per base sequence quality heeft in bijna elk monster een Q-score van 30+ (oftewel 99.9% nauwkeurigheid), wat standard een benchmark is in next-generation sequencing voor base-calling nauwkeurigheid.
+
+#### • Zijn er posities waar de kwaliteit duidelijk afneemt?
+
+Ja, basepaar 1 in monster l2 en basepaar 61-66 in monster R2, ondanks deze uitschieters zijn de Q-scores hoger dan 25 en 30 respectivelijk.
+
+#### • Zijn er adapter contaminaties of andere opvallende waarschuwingen?
+
+Voor de samples l1 en l2, kan geen adapter contaminatie worden geanalyseerd omdat de read lengte te kort is. In de monsters R1 en R2 is geen contaminatie gedetecteerd.
+
+#### • Zijn er verschillen tussen bestanden of reads binnen jullie sample?
+
+Ja, per base sequence content verschilt sterk per basepaar in monster R2. De baseparen 49-90 vertonen een rare verdeling van 0-70%, terwijl de R1 netjes tussen 20-30% blijft, wat goed is voor elk basepaar.
+Ook is de per sequence GC content wat minder goed bij R2. De daadwerkelijke GC-verdeling in R2 is sterker geconcentreerd tussen 51-55% dan verwacht en komt goed minder goed overeen met wat FastQC verwacht. Dit is echter niet cruciaal voor onze analyse, maar wel goed om hiermee rekening te houden. 
+Bij korte indexreads I1 en I2 (8-14 bp), worden ongebruikelijke patronen verwacht. Dit komt doordat deze reads uit vaste indexsequenties bestaan en die nemen we niet mee in onze beoordeling.
+
+#### • Ondersteun je antwoorden met enkele figuren uit de FastQC rapporten.
+
+![Figuur 1: Adapter content in R1.](~/summatieve_opdracht/figuren/adapter_content_R1.png)
+
+![Figuur 2: Adapter content in R2.](~/summatieve_opdracht/figuren/adapter_content_R2.png)
+
+![Figuur 3: Read quality in R1.](~/summatieve_opdracht/figuren/read_quality_R1.png)
+
+![Figuur 4: Read quality in R2.](~/summatieve_opdracht/figuren/read_quality_R2.png)
 
 # Een countmatrix en een Seurat object aanmaken:
-```{r een countmatrix en een Seurat object aanmaken}
+# ```{r een countmatrix en een Seurat object aanmaken}
 # Load the libraries
 library(dplyr)
 library(Seurat)
