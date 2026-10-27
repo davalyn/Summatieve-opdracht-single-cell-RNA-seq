@@ -11,7 +11,7 @@
 
 <meta name="author" content="Nina Songorzadeh en Alan Davliatov" />
 
-<meta name="date" content="2026-10-27" />
+<meta name="date" content="2026-10-28" />
 
 <title>DAUR2 - Summatieve opdracht single-cell RNA-seq</title>
 
@@ -353,7 +353,7 @@ display: none;
 <h1 class="title toc-ignore">DAUR2 - Summatieve opdracht single-cell
 RNA-seq</h1>
 <h4 class="author">Nina Songorzadeh en Alan Davliatov</h4>
-<h4 class="date">2026-10-27</h4>
+<h4 class="date">2026-10-28</h4>
 
 </div>
 
@@ -468,6 +468,39 @@ control2 &lt;- CreateSeuratObject(counts = countmatrix_long,
 # Amount of genes and cells
 dim(control2) # 15.374 genen en 15.725 cellen</code></pre>
 <pre><code>## [1] 15374 15725</code></pre>
+<pre class="r"><code># Load the summary
+summary &lt;- read.csv(&quot;/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary.csv&quot;)
+
+# Create a filtered summary with the same parameters of table 1
+quality &lt;- summary[c(10, 14, 16, 15, 11), c(&quot;Metric.Name&quot;, &quot;Metric.Value&quot;)]
+
+quality$Assessment &lt;- c(
+  &quot;High Quality&quot;,
+  &quot;Moderate Quality&quot;,
+  &quot;High Quality&quot;,
+  &quot;High Quality&quot;,
+  &quot;High Quality&quot;
+)
+
+print(quality, row.names = FALSE)</code></pre>
+<pre><code>##                        Metric.Name Metric.Value       Assessment
+##                              Cells       15,725     High Quality
+##                Mean reads per cell       21,734 Moderate Quality
+##              Median genes per cell        2,725     High Quality
+##         Median UMI counts per cell        5,854     High Quality
+##  Confidently mapped reads in cells        96.8%     High Quality</code></pre>
+<p>Het summary bestand is gefilterd met dezelfde parameters als bij
+tabel 1 van de reader. Bij de vergelijking met tabel 1 voldoen vier van
+de vijf kwaliteitsmetingen aan hoge kwaliteit. Alleen het gemiddelde
+aantal reads per cel (21.734) is gemiddeld, maar hier valt nog geen
+uitspraak over te maken waar dit aan ligt.De Q-scores van de ruwe
+inputdata zijn rond de 30+, wat betekent dat ze overwegend hoog zijn. Er
+is geen duidelijke adaptercontaminatie te herleiden in R1 en R2. Wel
+zijn er afwijkingen gevonden in de GC-verdeling en baseverdeling bij R2.
+De resultaten van de kwaliteitsmetingen laten zien dat 4 van de 5
+metingen voldoen aan een hoge standaard. De ruwe inputdata is dermate
+van goede kwaliteit dat er geen aanleiding is om deze als ongeschikt te
+zien voor verdere downstream analyse.</p>
 </div>
 
 
