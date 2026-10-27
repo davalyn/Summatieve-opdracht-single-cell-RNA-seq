@@ -9,18 +9,16 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
-### Introductie:
+### Introductie
 
-In deze casus analyseren we single-cell RNA-seq data van PBMC’s.
+Perifere Bloed Mononucleaire Cellen (PBMC) zijn immuuncellen uit het bloed waar onder andere T-cellen, B-cellen en monocyten in zitten. Wanneer er zich in het lichaam kanker manifesteert kan dit gepaard gaan met veranderingen in het immuunsysteem. PBMC's zijn hierbij een geschikte maatstaf om na te gaan welke veranderingen er in het immuunsysteem hebben plaatsgevonden voor verder onderzoek. 
 
-Onderzoeksvraag: Wat zijn de verschillen in celtype-samenstelling en genexpressie tussen control1 en long
-kanker, specifiek voor CD8 T cells?
+Single-cell RNA sequencing (scRNA-seq) is een techniek die van individuele cellen diens genexpressie onderzoekt. Met de data die uit scRNA-seq naar voren komt kan er een overzicht gemaakt worden die laat zien welke soort cellen aanwezig zijn in een sample en diens verschillen in genexpressie; iets wat normaliter onopgemerkt blijft in bulk RNA sequencing.
 
-• Waarom PBMC’s geschikt zijn voor deze onderzoeksvraag.
-• Waarom scRNA-seq geschikt is.
-• Wat het doel is van jullie scRNA-seq analyse long en richt je specifiek op: CD8 T cells.
-• Leg ook de differentieel genexpressie uit voor specifiek voor Cytotoxic T cells.
-• Welke verschillen jullie verwachten tussen control1 en long kanker.
+Het doel van deze analyse is om de celtype-samenstelling en genexpressie van PBMC's van een longkanker patiënt te vergelijken met die van een gezond persoon (control1). De nadruk bij deze analyse wordt gelegd op monocyten, aangezien deze onderdeel uitmaken van het aangeboren immuunsysteem en betrokken is bij ontstekingseacties. Longkanker kan het immuunsysteem beïnvloeden door de signalen van een immuunreactie te veranderen. Hierdoor kunnen monocyten veranderingen vertonen in hun aantal of expressie van genen.
+Om deze verschillen te onderzoeken wordt een differentiële genexpressie analyse uitgevoerd; een analyse waarbij naar voren komt welke genen in de monocyten van de longkanker patiënt hoger of lager tot expressie komen vergeleken met de control1. Er wordt hierbij gekeken naar genen die betrokken zijn bij ontstekingsreacties: TNF en IL1B. 
+
+De verwachting is dat er mogelijk een hoger aandeel monocyten aanwezig zullen zijn bij de patiënt met longkanker vergeleken met control1 aangezien longkanker de immuunrespons kan beïnvloeden. Daarnaast wordt een verhoogde expressie van IL1B en TNF verwacht bij de longkanker patiënt aangezien deze genen betrokken zijn bij ontstekingsreacties. 
 
 ### Kwaliteitscontrole van single-cell data
 
