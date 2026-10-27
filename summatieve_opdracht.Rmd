@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
+---
+
 ### Introductie
 
 Perifere Bloed Mononucleaire Cellen (PBMC) zijn immuuncellen uit het bloed waar onder andere T-cellen, B-cellen en monocyten in zitten. Wanneer er zich in het lichaam kanker manifesteert kan dit gepaard gaan met veranderingen in het immuunsysteem. PBMC's zijn hierbij een geschikte maatstaf om na te gaan welke veranderingen er in het immuunsysteem hebben plaatsgevonden voor verder onderzoek. 
@@ -19,6 +21,8 @@ Het doel van deze analyse is om de celtype-samenstelling en genexpressie van PBM
 Om deze verschillen te onderzoeken wordt een differentiële genexpressie analyse uitgevoerd; een analyse waarbij naar voren komt welke genen in de monocyten van de longkanker patiënt hoger of lager tot expressie komen vergeleken met de control1. Er wordt hierbij gekeken naar genen die betrokken zijn bij ontstekingsreacties: TNF en IL1B. 
 
 De verwachting is dat er mogelijk een hoger aandeel monocyten aanwezig zullen zijn bij de patiënt met longkanker vergeleken met control1 aangezien longkanker de immuunrespons kan beïnvloeden. Daarnaast wordt een verhoogde expressie van IL1B en TNF verwacht bij de longkanker patiënt aangezien deze genen betrokken zijn bij ontstekingsreacties. 
+
+---
 
 ### Kwaliteitscontrole van single-cell data
 
@@ -42,16 +46,19 @@ Bij korte indexreads I1 en I2 (8-14 bp), worden ongebruikelijke patronen verwach
 
 #### • Ondersteun je antwoorden met enkele figuren uit de FastQC rapporten.
 
-![Figuur 1: Adapter content in R1.](~/summatieve_opdracht/figuren/adapter_content_R1.png)
+![Figuur 1: Adapter content in R1.](figuren/adapter_content_R1.png)
 
-![Figuur 2: Adapter content in R2.](~/summatieve_opdracht/figuren/adapter_content_R2.png)
+![Figuur 2: Adapter content in R2.](figuren/adapter_content_R2.png)
 
-![Figuur 3: Read quality in R1.](~/summatieve_opdracht/figuren/read_quality_R1.png)
+![Figuur 3: Read kwaliteit in R1.](figuren/read_quality_R1.png)
 
-![Figuur 4: Read quality in R2.](~/summatieve_opdracht/figuren/read_quality_R2.png)
+![Figuur 4: Read kwaliteit in R2.](figuren/read_quality_R2.png)
+
+---
 
 # Een countmatrix en een Seurat object aanmaken:
-# ```{r een countmatrix en een Seurat object aanmaken}
+```{r een countmatrix en een Seurat object aanmaken}
+
 # Load the libraries
 library(dplyr)
 library(Seurat)
@@ -59,13 +66,14 @@ library(tidyverse)
 library(patchwork)
 
 # Load the PBMC dataset
-matrix_control2 <- Read10X(data.dir = "/home/daur2/scrnaseq/pbmc/healthy/control2_filtered_feature_bc_matrix/")
+countmatrix_long <- Read10X(data.dir = "/home/daur2/scrnaseq/pbmc/lung_cancer/lung_filtered_feature_bc_matrix/")
 
 # Make a Seurat object
-control2 <- CreateSeuratObject(counts = matrix_control2, 
+control2 <- CreateSeuratObject(counts = countmatrix_long, 
                            project = "control2", 
                            min.cells = 3, 
                            min.features = 200)
+
 # Amount of genes and cells
-dim(control2)
+dim(control2) # 15.374 genen en 15.725 cellen
 ```
