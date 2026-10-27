@@ -76,4 +76,21 @@ control2 <- CreateSeuratObject(counts = countmatrix_long,
 
 # Amount of genes and cells
 dim(control2) # 15.374 genen en 15.725 cellen
+
+# Load the summary
+summary <- read.csv(
+  "/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary.csv")
+
+# Create a filtered summary with the same parameters of table 1
+quality <- summary[c(10, 11, 14, 15, 16), c("Metric.Name", "Metric.Value")]
+
+knitr::kable(quality)
 ```
+
+#### • Vergelijk de sample & data kwaliteit aan de hand van het summary.csv bestand en tabel 1 “Quality assessment of scRNA-seq data” uit de reader. Wat concludeer je?
+
+Bij de vergelijking met tabel 1 voldoen vier van de vijf kwaliteitsmetingen aan hoge kwaliteit. Alleen het gemiddelde aantal reads per cel (21.734) is gemiddeld, maar hier valt nog geen uitspraak over te maken waar dit aan ligt. Op basis van deze metingen lijkt de dataset over het algemeen van goede kwaliteit.
+
+#### •Beschrijf wat de belangrijkste conclusies over de kwaliteit van de ruwe inputdata zijn?
+
+De Q-scores van de ruwe inputdata zijn rond de 30+, wat betekent dat ze overwegend hoog zijn. Er is geen duidelijke adaptercontaminatie te herleiden in R1 en R2. Wel zijn er afwijkingen gevonden in de GC-verdeling en baseverdeling bij R2. De resultaten van de kwaliteitsmetingen laten zien dat 4 van de 5 metingen voldoen aan een hoge standaard. De ruwe inputdata is dermate van goede kwaliteit dat er geen aanleiding is om deze als ongeschikt te zien voor downstream analyse. 
