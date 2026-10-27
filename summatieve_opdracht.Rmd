@@ -88,7 +88,8 @@ quality$Assessment <- c(
 )
 
 print(quality, row.names = FALSE)
-
 ```
+
+![](figuren/quality_assessment.png){width=70%}
 
 Het summary bestand is gefilterd met dezelfde parameters als bij tabel 1 van de reader. Bij de vergelijking met tabel 1 voldoen vier van de vijf kwaliteitsmetingen aan hoge kwaliteit. Alleen het gemiddelde aantal reads per cel (21.734) is gemiddeld, maar hier valt nog geen uitspraak over te maken waar dit aan ligt.De Q-scores van de ruwe inputdata zijn rond de 30+, wat betekent dat ze overwegend hoog zijn. Er is geen duidelijke adaptercontaminatie te herleiden in R1 en R2. Wel zijn er afwijkingen gevonden in de GC-verdeling en baseverdeling bij R2. De resultaten van de kwaliteitsmetingen laten zien dat 4 van de 5 metingen voldoen aan een hoge standaard. De ruwe inputdata is dermate van goede kwaliteit dat er geen aanleiding is om deze als ongeschikt te zien voor verdere downstream analyse. 
