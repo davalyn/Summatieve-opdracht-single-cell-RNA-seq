@@ -25,6 +25,7 @@ De verwachting is dat er mogelijk een hoger aandeel monocyten aanwezig zullen zi
 ---
 
 ## Kwaliteitscontrole van single-cell data
+**Eerst werden de FASTQ en FASTQC rapporten van het kankermonster geanalyseerd. Het bestond uit vier reads genaamd R1, R2, I1 en I2. R1 bevatte de cell barcode en UMI. R2 bevatte de biologische transcript sequentie voor genexpressie analyse. I1 en I2 zijn indexsequenties van illumina die voor sample identificatie dienen.**
 
 De readkwaliteit is over het algemeen heel goed. Per base sequence quality heeft in bijna elk monster een Q-score van 30+ (oftewel 99,9% nauwkeurigheid), wat standaard een benchmark is in next-generation sequencing voor base calling nauwkeurigheid. Er zijn 2 posities waar de kwaliteit duidelijk afneemt: bp 1 in monster I2 en bp 61–66 in monster R2. Ondanks deze uitschieters blijven de Q-scores hoger dan respectievelijk 25 en 30.
 
@@ -52,7 +53,6 @@ Ook hier geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties
 
 ---
 
-```{r Alle libraries laden}
 # Load the libraries
 library(dplyr)
 library(Seurat)
@@ -61,7 +61,8 @@ library(patchwork)
 library(Seurat)
 library(glmGamPoi)
 ```
-## Een countmatrix en een Seurat object aanmaken:
+## Een countmatrix en een Seurat object aanmaken
+**De illumina reads zijn op zichzelf niet bruikbaar voor downstream analyse. Hiervoor moeten deze reads eerst door middel van het programma Cell Ranger eerst verwerkt en geteld worden tot een countmatrix. Cell Ranger koppelde de sequencingreads aan de bijbehorende genen en cellen en telde met behulp van UMI's het aantal gedetecteerde RNA-moleculen per gen per cel. Om de dataset uit Cell Ranger in te lezen is er gebruik gemaakt van de code "Read10X" waarbij er vervolgens een Seurat object van gemaakt kon worden. Een Seurat object is de vorm van data waarmee de verdere downstream analyses mee gedaan worden.**
 ```{r een countmatrix en een Seurat object aanmaken}
 
 
