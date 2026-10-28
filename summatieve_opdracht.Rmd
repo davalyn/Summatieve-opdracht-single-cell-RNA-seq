@@ -60,6 +60,7 @@ library(tidyverse)
 library(patchwork)
 library(Seurat)
 library(glmGamPoi)
+library(ggplot2)
 ```
 
 ## Een countmatrix en een Seurat object aanmaken
@@ -107,6 +108,8 @@ print(quality, row.names = FALSE)
 
 Het summary bestand is gefilterd met dezelfde parameters als bij tabel 1 van de reader. Bij de vergelijking met tabel 1 voldoen vier van de vijf kwaliteitsmetingen aan hoge kwaliteit. Alleen het gemiddelde aantal reads per cel (21.734) is gemiddeld, maar hier valt nog geen uitspraak over te maken waar dit aan ligt.De Q-scores van de ruwe inputdata zijn rond de 30+, wat betekent dat ze overwegend hoog zijn. Er is geen duidelijke adaptercontaminatie te herleiden in R1 en R2. Wel zijn er afwijkingen gevonden in de GC-verdeling en baseverdeling bij R2. De resultaten van de kwaliteitsmetingen laten zien dat 4 van de 5 metingen voldoen aan een hoge standaard. De ruwe inputdata is dermate van goede kwaliteit dat er geen aanleiding is om deze als ongeschikt te zien voor verdere downstream analyse. 
 
+---
+
 ## QC-metrics 
 **Nu dat uit de initiële kwaliteitscontrole is gebleken dat de ruwe sequencingdata van voldoende kwaliteit is, worden de idividiuele cellen gecontroleerd op mogelijke outliers. Er wordt hier met name gekeken naa cellen die een opvallend hoog aantal genen vertonen, wat mogelijk wijst op doublets; doublets zijn cellen die tijdens het sequencingproces als een cel worden gezien. 
 Er wordt naast doublets ook gekekene naar het percentage mitochondriale RNA-expressie, aangezien een verhoogd percentage ervan kan wijzen op beschadigde of gestreste cellen. Dit wordt gedaan door middel van visuele plots die deze outliers laten zien, zodat deze vervolgens weggefilterd kunnen worden voor het analyseproces en dus niet een belemmering zullen vormen.**
@@ -148,6 +151,8 @@ control2_filtered <- subset(control2, subset = nFeature_RNA > 300 &
 
 • Licht toe wat de relevantie is voor CD8 T cells
 
+---
+
 ## Normalizatie
 
 ```{r Normalizatie}
@@ -168,3 +173,88 @@ head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:20])
 • waarom normalisatie nodig is
 
 • of integratie/batchcorrectie nodig is voor jullie vergelijking, en waarom wel of niet (niet nodig in ons onderzoek, maar we moeten wel kunnen uitleggen wat het is)
+
+---
+
+## Higly variable features
+
+```{r Higly variable features}
+# Identify the 2000 most variable features using "vst"
+control2_vf2000 <- FindVariableFeatures(
+  control2_lognorm,
+  selection.method = "vst",
+  nfeatures = 2000
+)
+
+# Inspect the top variable genes
+head(VariableFeatures(control2_vf2000))
+
+# Select the top10 highly variable features
+top10 <- head(VariableFeatures(control2_vf2000), 10)
+
+# Plot the variable features with labels
+plot3 <- VariableFeaturePlot(control2_vf2000)
+LabelPoints(plot = plot3, points = top10, repel = TRUE)
+
+# Scaling of the dataset
+control2_scaled <- ScaleData(control2_vf2000)
+```
+
+---
+
+## PCA
+
+```{r PCA}
+# Calculate Principal components
+control2_pca <- RunPCA(control2_scaled)
+
+# Plot percentage of variance for each PC
+ElbowPlot(control2_pca)
+
+# Make a scree plot 
+# Extract standard deviations from PCA
+pca_sd <- control2_pca[["pca"]]@stdev
+
+# Calculate variance per PC (SD²)
+pca_variance <- pca_sd^2
+
+# Calculate percentage of explained variance
+pca_variance_percent <- (pca_variance / sum(pca_variance)) * 100
+
+# Store results in a data frame
+pca_df <- data.frame(
+  PC = seq_along(pca_variance_percent),
+  PercentVariance = pca_variance_percent
+)
+
+ggplot(pca_df, aes(x = PC, y = PercentVariance)) +
+  geom_point(size = 2) +
+  geom_line() +
+  labs(
+    x = "Principal Component",
+    y = "Percentage of variance explained",
+    title = "Explained variance per principal component"
+  ) +
+  theme_minimal()
+```
+## Celtype annotatie en UMAPS
+```{r Celtype annotatie en UMAPS}
+# perform a nearest-neighbor and find clusters
+control2_neighbors <- FindNeighbors(control2_pca, dims = 1:10)
+control2_clusters <- FindClusters(control2_neighbors, resolution = 0.3)
+
+control2_umap <- RunUMAP(control2_clusters, dims = 1:10)
+
+DimPlot(
+  control2_umap,
+  reduction = "umap",
+  label = TRUE,
+  label.size = 5
+)
+```
+
+• Clusteren cellen?
+
+• Zie je duidelijke subgroepen?
+
+• Herken je het focus-thema (CD8 T cells) in je clusters of patronen? Licht toe.
