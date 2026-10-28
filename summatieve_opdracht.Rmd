@@ -111,8 +111,8 @@ Het summary bestand is gefilterd met dezelfde parameters als bij tabel 1 van de 
 ---
 
 ## QC-metrics 
-**Nu dat uit de initiële kwaliteitscontrole is gebleken dat de ruwe sequencingdata van voldoende kwaliteit is, worden de idividiuele cellen gecontroleerd op mogelijke outliers. Er wordt hier met name gekeken naa cellen die een opvallend hoog aantal genen vertonen, wat mogelijk wijst op doublets; doublets zijn cellen die tijdens het sequencingproces als een cel worden gezien. 
-Er wordt naast doublets ook gekekene naar het percentage mitochondriale RNA-expressie, aangezien een verhoogd percentage ervan kan wijzen op beschadigde of gestreste cellen. Dit wordt gedaan door middel van visuele plots die deze outliers laten zien, zodat deze vervolgens weggefilterd kunnen worden voor het analyseproces en dus niet een belemmering zullen vormen.**
+**Nu uit de initiële kwaliteitscontrole is gebleken dat de ruwe sequencingdata van voldoende kwaliteit is, worden de idividiuele cellen gecontroleerd op mogelijke outliers. Er wordt hier met name gekeken naar cellen die een opvallend hoog aantal genen vertonen, wat mogelijk wijst op doublets; doublets zijn cellen die tijdens het sequencingproces als één cel worden gezien. 
+Er wordt naast doublets ook gekekene naar het percentage mitochondriale RNA-expressie, aangezien een verhoogd percentage ervan kan wijzen op beschadigde of gestreste cellen. Dit wordt gedaan door middel van violin plots die deze outliers laten zien, zodat deze vervolgens weggefilterd kunnen worden voor het analyseproces en dus niet een belemmering zullen vormen.**
 
 ```{r Violin plots}
 # Calculate the mitochondrial percentage for quality control. 
@@ -124,9 +124,11 @@ VlnPlot(control2, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol
 ```
 
 **Figuur 4** 
-De violin plots tonen de verdeling van de cellen.
+De violin plots tonen de verdeling van de QC-metrics nFeature_RNA, nCount_RNA en percent.mt per cel.
 
-De violin plots 
+Uit figuur 4 nFeature_RNA komt naar voren dat de cellen grotendeels tussen de 1.500 en 6.000 genen bevatten. Boven de 6.000 genen worden de cellen steeds minder en zijn er ook enkele outliers zichtbaar. Bij nCount_RNA worden de UMI's per cel weergegeven, waarbij er ook een paar outliers te zien zijn. Bij percent.mt zitten de meeste cellen onder de 5% wat standaard is, maar er zijn ook een paar cellen die oplopen tot 7.5% en een enkele tot zelfs 10%. Dit wijst sterk op cellen van verminderde kwaliteit of doublets.
+
+**Naast de violin plots worden scatterplots gebruikt om de samenhang tussen de QC-metrics te analyseren.**
 
 ```{r Scatterplots}
 # A scatterplot of nCount (x-as) against nFeature (y-as)
@@ -136,24 +138,25 @@ plot1 + plot2
 ```
 
 **Figuur 5** 
-De scatterplot plot toont de verdeling van de genexpressietussen de verschillende samples.
+De scatterplots tonen de verdeling van het aantal UMI's en het percentage mitochondriaal RNA (links) en het aantal gedetecteerde genen (rechts).
 
-Cutoffs keuze uitleg:
+Op basis van figuur 4 en 5 is er gekozen voor een ondergrens van 300 en een bovengrens van 6.300 gedetecteerde genen per cel. Hiermee worden cellen met zeer weinig genen en mogelijke doublets uitgesloten. Daarnaast is er gekozen voor een grens vsn 50.000 UMI's, aangezien de scatterplot enkele outliers van hoge aantallen laat zien. Zoals eerder aangegeven is er bij mitochondriale RNA-percentage gekozen voor een grens van 5% omdat de meeste cellen hieronder liggen en alles wat daar boven komt wijst op gestreste of beschadigde cellen. 
+
+**De filtergrenzen zijn bepaald en worden ingezet op de dataset zodat de analyse verder kan zonder invloed van de cellen van verminderde kwaliteit**
 
 ```{r Cutoffs keuze}
 control2_filtered <- subset(control2, subset = nFeature_RNA > 300 & 
                               nFeature_RNA < 6300 & percent.mt < 5 & nCount_RNA < 50000)
+
+#ALAN moeten we hier nog aangeven hoeveel cellen verwijderd zijn?
 ```
 
-• Welke filters (cut-offs) zouden jullie toepassen?
-
-• Welke cellen verwijderen jullie en waarom?
-
-• Licht toe wat de relevantie is voor CD8 T cells
+Cellen van verminderde kwaliteit kunnen de downstream analyse van genexpressie en clustering beïnvloeden. Dit kan als gevolg hebben dat monocyten mogelijk verkeerd geïdentificeerd worden of verkeerde genexpressies naar voren komen. 
 
 ---
 
 ## Normalizatie
+**Na het filteren van de cellen werd de dataset genormaliseerd met behulp van de LogNormalize-methode. Dit werd gedaan aangezien cellen van elkaar onderling veel kunnen verschillen qua gemeten UMI's, waardoor vergelijkingen met elkaar niet mogelijk zijn. Met LogNormalize werden de UMI's per cel gecorrigeerd, vermenigvuldigd met een schaal van 10.000 en vervolgens logaritmisch getransformeerd waardoor verdere analyse beter zal verlopen.**
 
 ```{r Normalizatie}
 # Apply LogNormalize
@@ -166,18 +169,16 @@ control2_lognorm <- NormalizeData(
 control2_lognorm[["RNA"]] <- JoinLayers(control2_lognorm[["RNA"]])
 
 # Check normalized values
-# show the first 50 cells
+# show the first 20 cells
 head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:20]) 
 ```
-
-• waarom normalisatie nodig is
 
 • of integratie/batchcorrectie nodig is voor jullie vergelijking, en waarom wel of niet (niet nodig in ons onderzoek, maar we moeten wel kunnen uitleggen wat het is)
 
 ---
 
-## Higly variable features
-
+## Highly variable features
+**Na de normalisatie werd een selectie gemaakt van 2.000 genen die het meest variabel zijn. Deze genen bevatten de meeste bruikbare informatie voor de clustering die later zal plaatsvinden. Er is vervolgens ook een plot gemaakt met de tien meest variabele genen en is de data geschaald (maar waarom?**)
 ```{r Higly variable features}
 # Identify the 2000 most variable features using "vst"
 control2_vf2000 <- FindVariableFeatures(
@@ -203,14 +204,18 @@ control2_scaled <- ScaleData(control2_vf2000)
 ---
 
 ## PCA
-
-```{r PCA}
+**Na het schalen van de dataset werd PCA uitgevoerd om de variaties in genexpressie weer te geven. Dit werd gedaan in PC's. Door middel van elbow plots en een scree plot kon er gekeken worden hoeveel variaties in genexpressie elke PC bevat. Aan de hand van de elbow plot en scree plot kon er een besluit gemaakt worden met hoeveel PC's er verder gewerkt zou worden voor verdere downstream analyse. In dit geval clustering**
+```{r PCA elbow plot}
 # Calculate Principal components
 control2_pca <- RunPCA(control2_scaled)
 
 # Plot percentage of variance for each PC
 ElbowPlot(control2_pca)
+```
+**Figuur 7.** 
+Elbow plot van de PC.
 
+```{r PCA scree plot}
 # Make a scree plot 
 # Extract standard deviations from PCA
 pca_sd <- control2_pca[["pca"]]@stdev
@@ -237,10 +242,12 @@ ggplot(pca_df, aes(x = PC, y = PercentVariance)) +
   ) +
   theme_minimal()
 ```
+**Figuur 8**  
+Screeplot van de PCA, waarin het percentage verklaarde variantie per principal component wordt weergegeven.
 
 ---
 
-## UMAP
+## Clustering en UMAP
 
 ```{r UMAP}
 # perform a nearest-neighbor and find clusters
