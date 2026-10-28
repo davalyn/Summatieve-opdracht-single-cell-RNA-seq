@@ -151,7 +151,7 @@ control2_lognorm[["RNA"]] <- JoinLayers(control2_lognorm[["RNA"]])
 
 # Check normalized values
 # show the first 50 cells
-head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:50]) 
+head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:20]) 
 ```
 
 • waarom normalisatie nodig is
