@@ -52,14 +52,19 @@ Ook hier geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties
 
 ---
 
-## Een countmatrix en een Seurat object aanmaken:
-```{r een countmatrix en een Seurat object aanmaken}
-
+```{r Alle libraries laden}
 # Load the libraries
 library(dplyr)
 library(Seurat)
 library(tidyverse)
 library(patchwork)
+library(Seurat)
+library(glmGamPoi)
+```
+## Een countmatrix en een Seurat object aanmaken:
+```{r een countmatrix en een Seurat object aanmaken}
+
+
 
 # Load the PBMC dataset
 countmatrix_long <- Read10X(data.dir = "/home/daur2/scrnaseq/pbmc/lung_cancer/lung_filtered_feature_bc_matrix/")
@@ -131,3 +136,24 @@ control2_filtered <- subset(control2, subset = nFeature_RNA > 300 &
 • Welke cellen verwijderen jullie en waarom?
 
 • Licht toe wat de relevantie is voor CD8 T cells
+
+## Normalizatie
+
+```{r Normalizatie}
+# Apply LogNormalize
+control2_lognorm <- NormalizeData(
+  object = control2_filtered,  
+  normalization.method = "LogNormalize",  
+  scale.factor = 10000)
+
+# Layers samenvoegen
+control2_lognorm[["RNA"]] <- JoinLayers(control2_lognorm[["RNA"]])
+
+# Check normalized values
+# show the first 50 cells
+head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:50]) 
+```
+
+• waarom normalisatie nodig is
+
+• of integratie/batchcorrectie nodig is voor jullie vergelijking, en waarom wel of niet (niet nodig in ons onderzoek, maar we moeten wel kunnen uitleggen wat het is)
