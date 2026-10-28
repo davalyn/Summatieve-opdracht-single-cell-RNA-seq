@@ -65,6 +65,7 @@ library(ggplot2)
 
 ## Een countmatrix en een Seurat object aanmaken
 **De illumina reads zijn op zichzelf niet bruikbaar voor downstream analyse. Hiervoor moeten deze reads eerst door middel van het programma Cell Ranger eerst verwerkt en geteld worden tot een countmatrix. Cell Ranger koppelde de sequencingreads aan de bijbehorende genen en cellen en telde met behulp van UMI's het aantal gedetecteerde RNA-moleculen per gen per cel. Om de dataset uit Cell Ranger in te lezen is er gebruik gemaakt van de code "Read10X" waarbij er vervolgens een Seurat object van gemaakt kon worden. Een Seurat object is de vorm van data waarmee de verdere downstream analyses mee gedaan worden.**
+
 ```{r een countmatrix en een Seurat object aanmaken}
 
 # Load the PBMC dataset
@@ -78,6 +79,13 @@ control2 <- CreateSeuratObject(counts = countmatrix_long,
 
 # Amount of genes and cells
 dim(control2) # 15.374 genen en 15.725 cellen
+```
+
+Uit de Seurat komt naar voren dat onze sample bestaat uit 15.374 genen en 15.725 cellen. 
+
+**Vervolgens moet er worden gekeken wat de kwaliteit is van onze read. Hiervan is een apart bestand aangeleverd die is ingeladen. Dit bestand is een samenvatting van ons eerder gemaakte Seurat object. Deze samenvatting is vergeleken met een tabel uit een voorgaande opdracht om een conclusie te kunnen trekken over de kwaliteit van onze ruwe data.**
+
+```{r quality assessment}
 
 # Load the summary
 summary <- read.csv("/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary.csv")
@@ -103,6 +111,8 @@ Het summary bestand is gefilterd met dezelfde parameters als bij tabel 1 van de 
 ---
 
 ## QC-metrics 
+**Nu dat uit de initiële kwaliteitscontrole is gebleken dat de ruwe sequencingdata van voldoende kwaliteit is, worden de idividiuele cellen gecontroleerd op mogelijke outliers. Er wordt hier met name gekeken naa cellen die een opvallend hoog aantal genen vertonen, wat mogelijk wijst op doublets; doublets zijn cellen die tijdens het sequencingproces als een cel worden gezien. 
+Er wordt naast doublets ook gekekene naar het percentage mitochondriale RNA-expressie, aangezien een verhoogd percentage ervan kan wijzen op beschadigde of gestreste cellen. Dit wordt gedaan door middel van visuele plots die deze outliers laten zien, zodat deze vervolgens weggefilterd kunnen worden voor het analyseproces en dus niet een belemmering zullen vormen.**
 
 ```{r Violin plots}
 # Calculate the mitochondrial percentage for quality control. 
@@ -114,7 +124,9 @@ VlnPlot(control2, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol
 ```
 
 **Figuur 4** 
-De violin plot toont de verdeling van de genexpressietussen de verschillende samples.
+De violin plots tonen de verdeling van de cellen.
+
+De violin plots 
 
 ```{r Scatterplots}
 # A scatterplot of nCount (x-as) against nFeature (y-as)

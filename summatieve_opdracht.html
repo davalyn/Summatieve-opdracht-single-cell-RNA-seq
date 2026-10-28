@@ -486,6 +486,14 @@ control2 &lt;- CreateSeuratObject(counts = countmatrix_long,
 # Amount of genes and cells
 dim(control2) # 15.374 genen en 15.725 cellen</code></pre>
 <pre><code>## [1] 15374 15725</code></pre>
+<p>Uit de Seurat komt naar voren dat onze sample bestaat uit 15.374
+genen en 15.725 cellen.</p>
+<p><strong>Vervolgens moet er worden gekeken wat de kwaliteit is van
+onze read. Hiervan is een apart bestand aangeleverd die is ingeladen.
+Dit bestand is een samenvatting van ons eerder gemaakte Seurat object.
+Deze samenvatting is vergeleken met een tabel uit een voorgaande
+opdracht om een conclusie te kunnen trekken over de kwaliteit van onze
+ruwe data.</strong></p>
 <pre class="r"><code># Load the summary
 summary &lt;- read.csv(&quot;/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary.csv&quot;)
 
