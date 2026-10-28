@@ -93,3 +93,41 @@ print(quality, row.names = FALSE)
 ![](figuren/quality_assessment.png){width=70%}
 
 Het summary bestand is gefilterd met dezelfde parameters als bij tabel 1 van de reader. Bij de vergelijking met tabel 1 voldoen vier van de vijf kwaliteitsmetingen aan hoge kwaliteit. Alleen het gemiddelde aantal reads per cel (21.734) is gemiddeld, maar hier valt nog geen uitspraak over te maken waar dit aan ligt.De Q-scores van de ruwe inputdata zijn rond de 30+, wat betekent dat ze overwegend hoog zijn. Er is geen duidelijke adaptercontaminatie te herleiden in R1 en R2. Wel zijn er afwijkingen gevonden in de GC-verdeling en baseverdeling bij R2. De resultaten van de kwaliteitsmetingen laten zien dat 4 van de 5 metingen voldoen aan een hoge standaard. De ruwe inputdata is dermate van goede kwaliteit dat er geen aanleiding is om deze als ongeschikt te zien voor verdere downstream analyse. 
+
+
+## QC-metrics 
+
+```{r Violin plots}
+# Calculate the mitochondrial percentage for quality control. 
+# The [[ operator ]] can add columns to object metadata.
+control2[["percent.mt"]] <- PercentageFeatureSet(control2, pattern = "^MT-")
+
+# Visualize QC metrics as a violin plot
+VlnPlot(control2, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+```
+
+**Figuur 4** 
+De violin plot toont de verdeling van de genexpressietussen de verschillende samples.
+
+```{r Scatterplots}
+# A scatterplot of nCount (x-as) against nFeature (y-as)
+plot1 <- FeatureScatter(control2, feature1 = "nCount_RNA", feature2 = "percent.mt")
+plot2 <- FeatureScatter(control2, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+plot1 + plot2
+```
+
+**Figuur 5** 
+De scatterplot plot toont de verdeling van de genexpressietussen de verschillende samples.
+
+Cutoffs keuze uitleg:
+
+```{r Cutoffs keuze}
+control2_filtered <- subset(control2, subset = nFeature_RNA > 300 & 
+                              nFeature_RNA < 6300 & percent.mt < 5 & nCount_RNA < 50000)
+```
+
+• Welke filters (cut-offs) zouden jullie toepassen?
+
+• Welke cellen verwijderen jullie en waarom?
+
+• Licht toe wat de relevantie is voor CD8 T cells
