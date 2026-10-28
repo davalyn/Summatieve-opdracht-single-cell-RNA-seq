@@ -396,6 +396,12 @@ ontstekingsreacties.</p>
 </div>
 <div id="kwaliteitscontrole-van-single-cell-data" class="section level2">
 <h2>Kwaliteitscontrole van single-cell data</h2>
+<p><strong>Eerst werden de FASTQ en FASTQC rapporten van het
+kankermonster geanalyseerd. Het bestond uit vier reads genaamd R1, R2,
+I1 en I2. R1 bevatte de cell barcode en UMI. R2 bevatte de biologische
+transcript sequentie voor genexpressie analyse. I1 en I2 zijn
+indexsequenties van illumina die voor sample identificatie
+dienen.</strong></p>
 <p>De readkwaliteit is over het algemeen heel goed. Per base sequence
 quality heeft in bijna elk monster een Q-score van 30+ (oftewel 99,9%
 nauwkeurigheid), wat standaard een benchmark is in next-generation
@@ -456,7 +462,17 @@ library(Seurat)
 library(glmGamPoi)</code></pre>
 </div>
 <div id="een-countmatrix-en-een-seurat-object-aanmaken" class="section level2">
-<h2>Een countmatrix en een Seurat object aanmaken:</h2>
+<h2>Een countmatrix en een Seurat object aanmaken</h2>
+<p><strong>De illumina reads zijn op zichzelf niet bruikbaar voor
+downstream analyse. Hiervoor moeten deze reads eerst door middel van het
+programma Cell Ranger eerst verwerkt en geteld worden tot een
+countmatrix. Cell Ranger koppelde de sequencingreads aan de bijbehorende
+genen en cellen en telde met behulp van UMI’s het aantal gedetecteerde
+RNA-moleculen per gen per cel. Om de dataset uit Cell Ranger in te lezen
+is er gebruik gemaakt van de code “Read10X” waarbij er vervolgens een
+Seurat object van gemaakt kon worden. Een Seurat object is de vorm van
+data waarmee de verdere downstream analyses mee gedaan
+worden.</strong></p>
 <pre class="r"><code># Load the PBMC dataset
 countmatrix_long &lt;- Read10X(data.dir = &quot;/home/daur2/scrnaseq/pbmc/lung_cancer/lung_filtered_feature_bc_matrix/&quot;)
 
@@ -469,6 +485,14 @@ control2 &lt;- CreateSeuratObject(counts = countmatrix_long,
 # Amount of genes and cells
 dim(control2) # 15.374 genen en 15.725 cellen</code></pre>
 <pre><code>## [1] 15374 15725</code></pre>
+<p>Uit de Seurat komt naar voren dat onze sample bestaat uit 15.374
+genen en 15.725 cellen.</p>
+<p><strong>Vervolgens moet er worden gekeken wat de kwaliteit is van
+onze read. Hiervan is een apart bestand aangeleverd die is ingeladen.
+Dit bestand is een samenvatting van ons eerder gemaakte Seurat object.
+Deze samenvatting is vergeleken met een tabel uit een voorgaande
+opdracht om een conclusie te kunnen trekken over de kwaliteit van onze
+ruwe data.</strong></p>
 <pre class="r"><code># Load the summary
 summary &lt;- read.csv(&quot;/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary.csv&quot;)
 
