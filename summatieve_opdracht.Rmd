@@ -237,8 +237,12 @@ ggplot(pca_df, aes(x = PC, y = PercentVariance)) +
   ) +
   theme_minimal()
 ```
-## Celtype annotatie en UMAPS
-```{r Celtype annotatie en UMAPS}
+
+---
+
+## UMAP
+
+```{r UMAP}
 # perform a nearest-neighbor and find clusters
 control2_neighbors <- FindNeighbors(control2_pca, dims = 1:10)
 control2_clusters <- FindClusters(control2_neighbors, resolution = 0.3)
@@ -258,3 +262,62 @@ DimPlot(
 • Zie je duidelijke subgroepen?
 
 • Herken je het focus-thema (CD8 T cells) in je clusters of patronen? Licht toe.
+
+---
+
+## Celtype annotatie
+
+```{r Celtype annotatie}
+VlnPlot(
+  control2_umap,
+  features = c("CD3D", "CD4", "CD8A", "MS4A1", "NKG7", "CD14"),
+  ncol = 3
+)
+
+FeaturePlot(
+  control2_umap,
+  features = c("CD3D", "MS4A1", "NKG7", "CD14"),
+  ncol = 2
+)
+
+DotPlot(
+  control2_umap,
+  features = c(
+    "CD3D", "CD3E", "CD2",
+    "CD4", "IL7R",
+    "CD8A", "CD8B", "GZMB",
+    "MS4A1", "CD79A",
+    "NKG7", "GNLY",
+    "CD14", "LYZ",
+    "FCER1A", "CST3"
+  )
+) + RotatedAxis()
+
+cluster_celltype_labels <- c(
+  "0" = "T cells",
+  "1" = "T cells",
+  "2" = "B cells",
+  "3" = "T cells",
+  "4" = "Cytotoxic T cells",
+  "5" = "Monocytes",
+  "6" = "Cytotoxic T cells",
+  "7" = "Unassigned",
+  "8" = "B cells",
+  "9" = "B cells",
+  "10" = "Unassigned"
+)
+
+# replace cluster number with the cell-type identities
+names(cluster_celltype_labels) <- levels(control2_umap)
+control2_umap <- RenameIdents(control2_umap, cluster_celltype_labels)
+
+DimPlot(
+  control2_umap, 
+  reduction = "umap", 
+  label = TRUE, 
+  pt.size = 0.5) + NoLegend()
+```
+
+• Hoe betrouwbaar vind je de annotaties en waarom?
+
+• Welke celtypes domineren in het kankermonster?
