@@ -58,9 +58,11 @@ library(dplyr)
 library(Seurat)
 library(tidyverse)
 library(patchwork)
-library(Seurat)
 library(glmGamPoi)
 library(ggplot2)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+library(enrichplot)
 ```
 
 ## Een countmatrix en een Seurat object aanmaken
@@ -178,7 +180,7 @@ head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:20])
 ---
 
 ## Highly variable features
-**Na de normalisatie werd een selectie gemaakt van 2.000 genen die het meest variabel zijn. Deze genen bevatten de meeste bruikbare informatie voor de clustering die later zal plaatsvinden. Er is vervolgens ook een plot gemaakt met de tien meest variabele genen en is de data geschaald (maar waarom?**)
+**Na de normalisatie werd een selectie gemaakt van 2.000 genen die het meest variabel zijn. Deze genen bevatten de meeste bruikbare informatie voor de clustering die later zal plaatsvinden. Er is vervolgens ook een plot gemaakt met de tien meest variabele genen en is de data geschaald**
 ```{r Higly variable features}
 # Identify the 2000 most variable features using "vst"
 control2_vf2000 <- FindVariableFeatures(
@@ -205,6 +207,7 @@ control2_scaled <- ScaleData(control2_vf2000)
 
 ## PCA
 **Na het schalen van de dataset werd PCA uitgevoerd om de variaties in genexpressie weer te geven. Dit werd gedaan in PC's. Door middel van elbow plots en een scree plot kon er gekeken worden hoeveel variaties in genexpressie elke PC bevat. Aan de hand van de elbow plot en scree plot kon er een besluit gemaakt worden met hoeveel PC's er verder gewerkt zou worden voor verdere downstream analyse. In dit geval clustering**
+
 ```{r PCA elbow plot}
 # Calculate Principal components
 control2_pca <- RunPCA(control2_scaled)
@@ -212,6 +215,7 @@ control2_pca <- RunPCA(control2_scaled)
 # Plot percentage of variance for each PC
 ElbowPlot(control2_pca)
 ```
+
 **Figuur 7.** 
 Elbow plot van de PC.
 
@@ -357,6 +361,7 @@ DimPlot(
 • Welke celtypes domineren in het kankermonster?
 
 ## Vergelijking
+
 ```{r vergelijking}
 pbmc_control1_clusters <- readRDS("/home/daur2/scrnaseq/pbmc/healthy/control1_filtered_rds/pbmc_control1_clusters.rds")
 
@@ -389,8 +394,92 @@ pt.size = 0.5) + NoLegend()
 
 • Lijken de verhoudingen tussen celtypen of clusters vergelijkbaar?
 
-## Differentieel genexpressie (DGE) & GO-term enrichment analyse
+## Differentieel genexpressie (DGE) 
 
-```{r DGE en GO-term}
+```{r DGE}
+# Dataset control1
+Idents(control1_clusters) <- "seurat_clusters"
 
+control1_clusters <- subset(control1_clusters, idents = 1)
+
+control1_clusters$dataset <- "control1"
+
+
+# Dataset control2
+Idents(control2_clusters) <- "seurat_clusters"
+
+control2_clusters <- subset(control2_clusters, idents = 1)
+
+control2_clusters$dataset <- "control2"
+
+# Clusters combineren
+combined_cluster <- merge(
+  control1_clusters,
+  control2_clusters
+)
+
+combined_cluster <- JoinLayers(combined_cluster)
+
+DefaultAssay(combined_cluster) <- "RNA"
+
+Idents(combined_cluster) <- "dataset"
+
+levels(Idents(combined_cluster))
+
+table(combined_cluster$dataset)
+
+dge_cluster <- FindMarkers(
+  combined_cluster,
+  ident.1 = "control1",
+  ident.2 = "control2",
+  min.pct = 0.25,
+  logfc.threshold = 0.25
+)
+
+# Select significantly upregulated genes in condition B compared to A
+up_genes <- dge_cluster |>
+  filter(p_val_adj < 0.05, avg_log2FC > 2) |>
+  rownames()
+
+# Select significantly downregulated genes in condition B compared to A
+down_genes <- dge_cluster |>
+  filter(p_val_adj < 0.05, avg_log2FC < -2) |>
+  rownames()
+
+# Define the background gene set as all genes detected in the combined cluster
+background_genes <- rownames(combined_cluster)
 ```
+
+## GO-term enrichment analyse
+
+```{r GO-term}
+# Perform GO enrichment analysis for upregulated genes
+ego_up <- enrichGO(
+  gene     = up_genes,
+  universe = background_genes,
+  OrgDb    = org.Hs.eg.db,
+  keyType  = "SYMBOL",
+  ont      = "BP"
+)
+
+dotplot(ego_up)
+
+# Perform GO enrichment analysis for downregulated genes
+ego_down <- enrichGO(
+  gene     = down_genes,
+  universe = background_genes,
+  OrgDb    = org.Hs.eg.db,
+  keyType  = "SYMBOL",
+  ont      = "BP"
+)
+
+dotplot(ego_down)
+```
+
+• Welke processen zijn verrijkt?
+
+• Kun je deze verschillen biologisch goed interpreteren, of is voorzichtigheid nodig?
+
+Let op:
+
+• Grote verschillen zijn niet verwacht tussen twee gezonde controles → bespreek waarom.
