@@ -274,57 +274,123 @@ DimPlot(
 
 ## Celtype annotatie
 
-```{r Celtype annotatie}
-VlnPlot(
-  control2_umap,
-  features = c("CD3D", "CD4", "CD8A", "MS4A1", "NKG7", "CD14"),
-  ncol = 3
-)
+```{r Markers vinden}
+# Find the markers for each cluster compared to all remaining cells,
+# report only the positive ones and combine the results
+clusters <- levels(Idents(control2_clusters))
 
-FeaturePlot(
-  control2_umap,
-  features = c("CD3D", "MS4A1", "NKG7", "CD14"),
-  ncol = 2
-)
+marker_list <- list()
 
-DotPlot(
-  control2_umap,
-  features = c(
-    "CD3D", "CD3E", "CD2",
-    "CD4", "IL7R",
-    "CD8A", "CD8B", "GZMB",
-    "MS4A1", "CD79A",
-    "NKG7", "GNLY",
-    "CD14", "LYZ",
-    "FCER1A", "CST3"
+for (cl in clusters) {
+
+  marker_list[[cl]] <- FindMarkers(
+    control2_clusters,
+    ident.1 = cl,
+    only.pos = TRUE,
+    max.cells.per.ident = 500 # Uncomment to reduce computational load
   )
-) + RotatedAxis()
 
-cluster_celltype_labels <- c(
-  "0" = "T cells",
-  "1" = "T cells",
-  "2" = "B cells",
-  "3" = "T cells",
-  "4" = "Cytotoxic T cells",
-  "5" = "Monocytes",
-  "6" = "Cytotoxic T cells",
-  "7" = "Unassigned",
-  "8" = "B cells",
-  "9" = "B cells",
-  "10" = "Unassigned"
+  gc()
+}
+
+control2_all_markers <- bind_rows(
+  lapply(names(marker_list), function(cl) {
+    marker_list[[cl]] %>%
+      rownames_to_column("gene") %>%
+      mutate(cluster = cl)
+  })
 )
 
-# replace cluster number with the cell-type identities
-names(cluster_celltype_labels) <- levels(control2_umap)
-control2_umap <- RenameIdents(control2_umap, cluster_celltype_labels)
+control2_all_markers |>
+  group_by(cluster) |>
+  dplyr::filter(avg_log2FC > 1)
+
+top_markers <- control2_all_markers |>
+  group_by(cluster) |>
+  slice_max(avg_log2FC, n = 1)
+```
+```{r UMAP met annotaties}
+cluster_celltype_labels <- c(
+  "0"  = "CD4 T cells",
+  "1"  = "CD4 T cells",
+  "2"  = "B cells",
+  "3"  = "CD8 T cells ",
+  "4"  = "NK cells",
+  "5"  = "Monocytes",
+  "6"  = "CD8 T cells ",
+  "7"  = "T cells",
+  "8"  = "B cells",
+  "9"  = "CD8 T cells ",
+  "10" = "Myeloid cells"
+)
+
+# Gebruik de oorspronkelijke clusternummers
+cluster_ids <- as.character(control2_clusters$seurat_clusters)
+
+celltype_map <- setNames(
+  unname(cluster_celltype_labels[cluster_ids]),
+  colnames(control2_clusters)
+)
+
+# Koppel de annotaties aan de UMAP
+control2_umap$celltype <- celltype_map[colnames(control2_umap)]
+
+# Controleer of de annotaties correct zijn toegewezen
+table(control2_umap$celltype, useNA = "ifany")
 
 DimPlot(
-  control2_umap, 
-  reduction = "umap", 
-  label = TRUE, 
-  pt.size = 0.5) + NoLegend()
-```
+  control2_umap,
+  reduction = "umap",
+  group.by = "celltype",
+  label = TRUE,
+  repel = TRUE,
+  pt.size = 0.3,
+  label.size = 4
+) +
+  NoLegend() +
+  ggtitle("UMAP of annotated PBMC cell types") +
+  theme(plot.title = element_text(hjust = 0.5))
+``` 
 
 • Hoe betrouwbaar vind je de annotaties en waarom?
 
 • Welke celtypes domineren in het kankermonster?
+
+## Vergelijking
+```{r vergelijking}
+pbmc_control1_clusters <- readRDS("/home/daur2/scrnaseq/pbmc/healthy/control1_filtered_rds/pbmc_control1_clusters.rds")
+
+cluster_celltype_labels <- c(
+"0" = "T cells",
+"1" = "CD4 T cells",
+"2" = "Monocytes",
+"3" = "CD8 T-cells",
+"4" = "NK cells",
+"5" = "B cells",
+"6" = "Monocytes",
+"7" = "Platelets",
+"8" = "NK cells",
+"9" = "Monocytes",
+"10" = "Dendritic cells",
+"11" = "B cells"
+)
+
+names(cluster_celltype_labels) <- levels(pbmc_control1_clusters)
+pbmc_control1_clusters <- RenameIdents(pbmc_control1_clusters, cluster_celltype_labels)
+
+DimPlot(
+pbmc_control1_clusters,
+reduction = "umap",
+label = TRUE,
+pt.size = 0.5) + NoLegend()
+```
+
+• Zie je dezelfde globale celtypen terug?
+
+• Lijken de verhoudingen tussen celtypen of clusters vergelijkbaar?
+
+## Differentieel genexpressie (DGE) & GO-term enrichment analyse
+
+```{r DGE en GO-term}
+
+```
