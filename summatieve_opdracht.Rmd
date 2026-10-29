@@ -363,7 +363,7 @@ DimPlot(
 ## Vergelijking
 
 ```{r vergelijking}
-pbmc_control1_clusters <- readRDS("/home/daur2/scrnaseq/pbmc/healthy/control1_filtered_rds/pbmc_control1_clusters.rds")
+control1_clusters <- readRDS("/home/daur2/scrnaseq/pbmc/healthy/control1_filtered_rds/pbmc_control1_clusters.rds")
 
 cluster_celltype_labels <- c(
 "0" = "T cells",
@@ -380,11 +380,11 @@ cluster_celltype_labels <- c(
 "11" = "B cells"
 )
 
-names(cluster_celltype_labels) <- levels(pbmc_control1_clusters)
-pbmc_control1_clusters <- RenameIdents(pbmc_control1_clusters, cluster_celltype_labels)
+names(cluster_celltype_labels) <- levels(control1_clusters)
+control1_clusters <- RenameIdents(control1_clusters, cluster_celltype_labels)
 
 DimPlot(
-pbmc_control1_clusters,
+control1_clusters,
 reduction = "umap",
 label = TRUE,
 pt.size = 0.5) + NoLegend()
