@@ -323,7 +323,7 @@ for (cl in clusters) {
     control2_clusters,
     ident.1 = cl,
     only.pos = TRUE,
-    max.cells.per.ident = 500 
+    max.cells.per.ident = 1000 
   )
 
   gc()
@@ -347,46 +347,38 @@ top_markers <- control2_all_markers |>
 ```
 
 ```{r UMAP met annotaties}
+# Set original cluster identities
+Idents(control2_umap) <- "seurat_clusters"
+
 cluster_celltype_labels <- c(
   "0"  = "CD4 T cells",
   "1"  = "CD4 T cells",
   "2"  = "B cells",
-  "3"  = "CD8 T cells ",
+  "3"  = "CD8 T-cells",
   "4"  = "NK cells",
-  "5"  = "Monocytes",
-  "6"  = "CD8 T cells ",
-  "7"  = "T cells",
+  "5"  = "CD8 T-cells",
+  "6"  = "Monocytes",
+  "7"  = "Other cells",
   "8"  = "B cells",
-  "9"  = "CD8 T cells ",
-  "10" = "Myeloid cells"
+  "9"  = "B cells",
+  "10" = "Neutrophils",
+  "11" = "T cells"
 )
 
-# Gebruik de oorspronkelijke clusternummers
-cluster_ids <- as.character(control2_clusters$seurat_clusters)
+# Rename cluster identities
+names(cluster_celltype_labels) <- levels(control2_umap)
 
-celltype_map <- setNames(
-  unname(cluster_celltype_labels[cluster_ids]),
-  colnames(control2_clusters)
+control2_umap <- RenameIdents(
+  control2_umap,
+  cluster_celltype_labels
 )
 
-# Koppel de annotaties aan de UMAP
-control2_umap$celltype <- celltype_map[colnames(control2_umap)]
-
-# Controleer of de annotaties correct zijn toegewezen
-table(control2_umap$celltype, useNA = "ifany")
-
+# Visualize annotated clusters
 DimPlot(
   control2_umap,
   reduction = "umap",
-  group.by = "celltype",
   label = TRUE,
-  repel = TRUE,
-  pt.size = 0.3,
-  label.size = 4
-) +
-  NoLegend() +
-  ggtitle("UMAP of annotated PBMC cell types") +
-  theme(plot.title = element_text(hjust = 0.5))
+  pt.size = 0.5) + NoLegend()
 ``` 
 
 • Hoe betrouwbaar vind je de annotaties en waarom?
