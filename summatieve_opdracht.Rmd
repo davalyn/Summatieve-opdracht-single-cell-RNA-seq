@@ -146,10 +146,25 @@ Op basis van figuur 4 en 5 is er gekozen voor een ondergrens van 300 en een bove
 **De filtergrenzen zijn bepaald en worden ingezet op de dataset zodat de analyse verder kan zonder invloed van de cellen van verminderde kwaliteit**
 
 ```{r Cutoffs keuze}
-control2_filtered <- subset(control2, subset = nFeature_RNA > 300 & 
-                              nFeature_RNA < 6300 & percent.mt < 5 & nCount_RNA < 50000)
+# Inspect quality control metrics
 
-#ALAN moeten we hier nog aangeven hoeveel cellen verwijderd zijn?
+# nFeature_RNA: cutoff 6000, omdat 99% van de cellen max 5178 genen heeft
+quantile(control2$nFeature_RNA, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
+
+# nCount_RNA: cutoff 30000, omdat 99% van de cellen max 24735 UMI counts heeft
+quantile(control2$nCount_RNA, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
+
+# percent.mt: cutoff 5%, omdat 99% van de cellen max 4.28% mitochondriaal RNA heeft
+quantile(control2$percent.mt, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
+
+# Iets hogere cutoffs zorgen ervoor dat cellen net boven de 99% niet worden verwijderd
+
+# Choosing cutoffs
+control2_filtered <- subset(control2, subset = nFeature_RNA > 500 & 
+                              nFeature_RNA < 6000 & percent.mt < 5 & nCount_RNA < 30000)
+
+# Aantal verwijderde cellen
+ncol(control2) - ncol(control2_filtered)
 ```
 
 Cellen van verminderde kwaliteit kunnen de downstream analyse van genexpressie en clustering beïnvloeden. Dit kan als gevolg hebben dat CD8 T-cellen mogelijk verkeerd geïdentificeerd worden of verkeerde genexpressies naar voren komen. 
@@ -166,12 +181,11 @@ control2_lognorm <- NormalizeData(
   normalization.method = "LogNormalize",  
   scale.factor = 10000)
 
-# Layers samenvoegen
+# Adding layers together
 control2_lognorm[["RNA"]] <- JoinLayers(control2_lognorm[["RNA"]])
 
-# Check normalized values
-# show the first 20 cells
-head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:20]) 
+# Check normalized values of the first 10 cells
+head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:10]) 
 ```
 
 • of integratie/batchcorrectie nodig is voor jullie vergelijking, en waarom wel of niet (niet nodig in ons onderzoek, maar we moeten wel kunnen uitleggen wat het is)
@@ -180,6 +194,7 @@ head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:20])
 
 ## Highly variable features
 **Na de normalisatie werd een selectie gemaakt van 2.000 genen die het meest variabel zijn. Deze genen bevatten de meeste bruikbare informatie voor de clustering die later zal plaatsvinden. Er is vervolgens ook een plot gemaakt met de tien meest variabele genen en is de data geschaald voor de latere PCA analyse. 
+
 ```{r Higly variable features}
 # Identify the 2000 most variable features using "vst"
 control2_vf2000 <- FindVariableFeatures(
@@ -273,7 +288,7 @@ Zoals te zien is zijn er duidelijke blokken te zien tot PC9. PC10 begint hierbij
 ```{r UMAP}
 # perform a nearest-neighbor and find clusters
 control2_neighbors <- FindNeighbors(control2_pca, dims = 1:10)
-control2_clusters <- FindClusters(control2_neighbors, resolution = 0.3)
+control2_clusters <- FindClusters(control2_neighbors, resolution = 0.5)
 
 control2_umap <- RunUMAP(control2_clusters, dims = 1:10)
 
@@ -308,7 +323,7 @@ for (cl in clusters) {
     control2_clusters,
     ident.1 = cl,
     only.pos = TRUE,
-    max.cells.per.ident = 500 # Uncomment to reduce computational load
+    max.cells.per.ident = 500 
   )
 
   gc()
@@ -324,7 +339,7 @@ control2_all_markers <- bind_rows(
 
 control2_all_markers |>
   group_by(cluster) |>
-  dplyr::filter(avg_log2FC > 1)
+  filter(avg_log2FC > 1)
 
 top_markers <- control2_all_markers |>
   group_by(cluster) |>
@@ -501,3 +516,11 @@ dotplot(ego_down)
 Let op:
 
 • Grote verschillen zijn niet verwacht tussen twee gezonde controles → bespreek waarom.
+
+## Conclusie
+
+• Welke verschillen zie je tussen control1 en long?
+
+• Zijn er veranderingen in celtype-samenstelling en of genexpressie?
+
+• Kun je iets zeggen over het immuunsysteem bij deze Cytotoxic T cells?
