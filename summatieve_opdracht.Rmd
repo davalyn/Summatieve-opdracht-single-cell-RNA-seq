@@ -17,11 +17,10 @@ Perifere Bloed Mononucleaire Cellen (PBMC) zijn immuuncellen uit het bloed waar 
 
 Single-cell RNA sequencing (scRNA-seq) is een techniek die van individuele cellen diens genexpressie onderzoekt. Met de data die uit scRNA-seq naar voren komt kan er een overzicht gemaakt worden die laat zien welke soort cellen aanwezig zijn in een sample en diens verschillen in genexpressie; iets wat normaliter onopgemerkt blijft in bulk RNA sequencing.
 
-Het doel van deze analyse is om de celtype-samenstelling en genexpressie van PBMC's van een longkanker patiënt te vergelijken met die van een gezond persoon (control1). De nadruk bij deze analyse wordt gelegd op monocyten, aangezien deze onderdeel uitmaken van het aangeboren immuunsysteem en betrokken is bij ontstekingseacties. Longkanker kan het immuunsysteem beïnvloeden door de signalen van een immuunreactie te veranderen. Hierdoor kunnen monocyten veranderingen vertonen in hun aantal of expressie van genen.
-Om deze verschillen te onderzoeken wordt een differentiële genexpressie analyse uitgevoerd; een analyse waarbij naar voren komt welke genen in de monocyten van de longkanker patiënt hoger of lager tot expressie komen vergeleken met de control1. Er wordt hierbij gekeken naar genen die betrokken zijn bij ontstekingsreacties: TNF en IL1B. 
+Het doel van deze analyse is om de celtype-samenstelling en genexpressie van PBMC's van een longkanker patiënt te vergelijken met die van een gezond persoon (control1). De nadruk bij deze analyse wordt gelegd op CD8 T-cellen, aangezien deze onderdeel uitmaken van het adaptieve immuunsysteem en betrokken zijn bij het herkennen en vernietigen van cellen met afwijkingen zoals tumorcellen. Dit wordt gedaan door cytotoxische eiwitten en het proces heet cytotoxiciteit. Longkanker kan het immuunsysteem beïnvloeden door de signalen van het immuunsysteem te veranderen. Hierdoor kunnen CD8 T-cellen veranderingen vertonen in hun aantal of expressie van genen.
+Om deze verschillen te onderzoeken wordt een differentiële genexpressie analyse uitgevoerd; een analyse waarbij naar voren komt welke genen in de CD8 T-cellen van de longkanker patiënt hoger of lager tot expressie komen vergeleken met de control1. Er wordt hierbij gekeken naar genen die betrokken zijn bij cytotoxiciteit van CD8 T-cellen.
 
-De verwachting is dat er mogelijk een hoger aandeel monocyten aanwezig zullen zijn bij de patiënt met longkanker vergeleken met control1 aangezien longkanker de immuunrespons kan beïnvloeden. Daarnaast wordt een verhoogde expressie van IL1B en TNF verwacht bij de longkanker patiënt aangezien deze genen betrokken zijn bij ontstekingsreacties. 
-
+De verwachting is dat er mogelijk een lager aandeel CD8 T-cellen aanwezig zullen zijn bij de patiënt met longkanker vergeleken met control1 aangezien longkanker de immuunrespons van cytotoxische cellen op een negatieve manier kan beïnvloeden. Een tumor probeert de immuunrespons van cytotoxiciteit te omzeilen, dus er wordt verwacht dat er een negatieve impuls door de longkankercellen gegeven worden aan de CD8 T-cellen. 
 ---
 
 ## Kwaliteitscontrole van single-cell data
@@ -151,7 +150,7 @@ control2_filtered <- subset(control2, subset = nFeature_RNA > 300 &
 #ALAN moeten we hier nog aangeven hoeveel cellen verwijderd zijn?
 ```
 
-Cellen van verminderde kwaliteit kunnen de downstream analyse van genexpressie en clustering beïnvloeden. Dit kan als gevolg hebben dat monocyten mogelijk verkeerd geïdentificeerd worden of verkeerde genexpressies naar voren komen. 
+Cellen van verminderde kwaliteit kunnen de downstream analyse van genexpressie en clustering beïnvloeden. Dit kan als gevolg hebben dat CD8 T-cellen mogelijk verkeerd geïdentificeerd worden of verkeerde genexpressies naar voren komen. 
 
 ---
 
@@ -178,7 +177,7 @@ head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:20])
 ---
 
 ## Highly variable features
-**Na de normalisatie werd een selectie gemaakt van 2.000 genen die het meest variabel zijn. Deze genen bevatten de meeste bruikbare informatie voor de clustering die later zal plaatsvinden. Er is vervolgens ook een plot gemaakt met de tien meest variabele genen en is de data geschaald (maar waarom?**)
+**Na de normalisatie werd een selectie gemaakt van 2.000 genen die het meest variabel zijn. Deze genen bevatten de meeste bruikbare informatie voor de clustering die later zal plaatsvinden. Er is vervolgens ook een plot gemaakt met de tien meest variabele genen en is de data geschaald voor de latere PCA analyse. 
 ```{r Higly variable features}
 # Identify the 2000 most variable features using "vst"
 control2_vf2000 <- FindVariableFeatures(
@@ -204,7 +203,7 @@ control2_scaled <- ScaleData(control2_vf2000)
 ---
 
 ## PCA
-**Na het schalen van de dataset werd PCA uitgevoerd om de variaties in genexpressie weer te geven. Dit werd gedaan in PC's. Door middel van elbow plots en een scree plot kon er gekeken worden hoeveel variaties in genexpressie elke PC bevat. Aan de hand van de elbow plot en scree plot kon er een besluit gemaakt worden met hoeveel PC's er verder gewerkt zou worden voor verdere downstream analyse. In dit geval clustering**
+**Na het schalen van de dataset werd PCA uitgevoerd om de variaties in genexpressie weer te geven. Dit werd gedaan in PC's. Door middel van elbow plots en een scree plot kon er gekeken worden hoeveel variaties in genexpressie elke PC bevat. Aan de hand van de elbow plot en scree plot kon er een besluit gemaakt worden met hoeveel PC's er verder gewerkt zou worden voor verdere downstream analyse. In dit geval de clustering**
 ```{r PCA elbow plot}
 # Calculate Principal components
 control2_pca <- RunPCA(control2_scaled)
@@ -212,8 +211,13 @@ control2_pca <- RunPCA(control2_scaled)
 # Plot percentage of variance for each PC
 ElbowPlot(control2_pca)
 ```
+
 **Figuur 7.** 
 Elbow plot van de PC.
+
+De elbowplot laat zien dat PC 1 tot en met 4 de meeste variatie laten zien in standaarddeviatie vanwege de knik die eindigt bij PC 4. Echter is er nog wel een daling te zien tot en met PC 10. Vanaf PC 10 er weinig variatie te constateren.
+
+**Om een beter overzicht te krijgen hoeveel procent variatie elk punt weergeeft, is er een scree plot gemaakt. Een scree plot laat de variatie in procenten zien in plaats van in standaarddeviatie.**
 
 ```{r PCA scree plot}
 # Make a scree plot 
@@ -245,9 +249,24 @@ ggplot(pca_df, aes(x = PC, y = PercentVariance)) +
 **Figuur 8**  
 Screeplot van de PCA, waarin het percentage verklaarde variantie per principal component wordt weergegeven.
 
----
+Uit de screeplot komt naar voren dat de eerste 4 PC's de meeste procentuele varianties weergeven. Tot en met PC 10 is, net zoals bij de elbow plot, een daling te zien.
 
+**Om zeker te weten dat de eerste 4 PC's het meest van invloed zijn, werd er een heatmap gemaakt. Een heatmap weergeeft de screeplot in een visuele manier. Hiermee kan er zeker gesteld worden dat deze PC's een biologische betekenis hebben en dus geen ruis zijn. **
+
+```{r Heatmap}
+# Plot a heatmap of genes for each PC
+# dims = PC1 up to PC15 - adjust when necessary 
+DimHeatmap(control2_pca, dims = 1:10, cells = 500, balanced = TRUE) 
+```
+
+**Figuur9**
+Heatmap van de PCA.
+
+Zoals te zien is zijn er duidelijke blokken te zien tot PC9. PC10 begint hierbij 
+
+---
 ## Clustering en UMAP
+**
 
 ```{r UMAP}
 # perform a nearest-neighbor and find clusters
