@@ -267,8 +267,8 @@ Heatmap van de PCA.
 Zoals te zien is zijn er duidelijke blokken te zien tot PC9. PC10 begint hierbij 
 
 ---
+
 ## Clustering en UMAP
-**
 
 ```{r UMAP}
 # perform a nearest-neighbor and find clusters
@@ -330,6 +330,7 @@ top_markers <- control2_all_markers |>
   group_by(cluster) |>
   slice_max(avg_log2FC, n = 1)
 ```
+
 ```{r UMAP met annotaties}
 cluster_celltype_labels <- c(
   "0"  = "CD4 T cells",
