@@ -21,6 +21,7 @@ Het doel van deze analyse is om de celtype-samenstelling en genexpressie van PBM
 Om deze verschillen te onderzoeken wordt een differentiële genexpressie analyse uitgevoerd; een analyse waarbij naar voren komt welke genen in de CD8 T-cellen van de longkanker patiënt hoger of lager tot expressie komen vergeleken met de control1. Er wordt hierbij gekeken naar genen die betrokken zijn bij cytotoxiciteit van CD8 T-cellen.
 
 De verwachting is dat er mogelijk een lager aandeel CD8 T-cellen aanwezig zullen zijn bij de patiënt met longkanker vergeleken met control1 aangezien longkanker de immuunrespons van cytotoxische cellen op een negatieve manier kan beïnvloeden. Een tumor probeert de immuunrespons van cytotoxiciteit te omzeilen, dus er wordt verwacht dat er een negatieve impuls door de longkankercellen gegeven worden aan de CD8 T-cellen. 
+
 ---
 
 ## Kwaliteitscontrole van single-cell data
@@ -124,10 +125,10 @@ control2[["percent.mt"]] <- PercentageFeatureSet(control2, pattern = "^MT-")
 VlnPlot(control2, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 ```
 
-**Figuur 4** 
+**Figuur 5** 
 De violin plots tonen de verdeling van de QC-metrics nFeature_RNA, nCount_RNA en percent.mt per cel.
 
-Uit figuur 4 nFeature_RNA komt naar voren dat de cellen grotendeels tussen de 1.500 en 6.000 genen bevatten. Boven de 6.000 genen worden de cellen steeds minder en zijn er ook enkele outliers zichtbaar. Bij nCount_RNA worden de UMI's per cel weergegeven, waarbij er ook een paar outliers te zien zijn. Bij percent.mt zitten de meeste cellen onder de 5% wat standaard is, maar er zijn ook een paar cellen die oplopen tot 7.5% en een enkele tot zelfs 10%. Dit wijst sterk op cellen van verminderde kwaliteit of doublets.
+Uit figuur 5 nFeature_RNA komt naar voren dat de cellen grotendeels tussen de 1.500 en 6.000 genen bevatten. Boven de 6.000 genen worden de cellen steeds minder en zijn er ook enkele outliers zichtbaar. Bij nCount_RNA worden de UMI's per cel weergegeven, waarbij er ook een paar outliers te zien zijn. Bij percent.mt zitten de meeste cellen onder de 5% wat standaard is, maar er zijn ook een paar cellen die oplopen tot 7.5% en een enkele tot zelfs 10%. Dit wijst sterk op cellen van verminderde kwaliteit of doublets.
 
 **Naast de violin plots worden scatterplots gebruikt om de samenhang tussen de QC-metrics te analyseren.**
 
@@ -138,10 +139,10 @@ plot2 <- FeatureScatter(control2, feature1 = "nCount_RNA", feature2 = "nFeature_
 plot1 + plot2
 ```
 
-**Figuur 5** 
+**Figuur 6** 
 De scatterplots tonen de verdeling van het aantal UMI's en het percentage mitochondriaal RNA (links) en het aantal gedetecteerde genen (rechts).
 
-Op basis van figuur 4 en 5 is er gekozen voor een ondergrens van 300 en een bovengrens van 6.300 gedetecteerde genen per cel. Hiermee worden cellen met zeer weinig genen en mogelijke doublets uitgesloten. Daarnaast is er gekozen voor een grens vsn 50.000 UMI's, aangezien de scatterplot enkele outliers van hoge aantallen laat zien. Zoals eerder aangegeven is er bij mitochondriale RNA-percentage gekozen voor een grens van 5% omdat de meeste cellen hieronder liggen en alles wat daar boven komt wijst op gestreste of beschadigde cellen. 
+Op basis van figuur 5 en 6 is er gekozen voor een ondergrens van 300 en een bovengrens van 6.300 gedetecteerde genen per cel. Hiermee worden cellen met zeer weinig genen en mogelijke doublets uitgesloten. Daarnaast is er gekozen voor een grens vsn 50.000 UMI's, aangezien de scatterplot enkele outliers van hoge aantallen laat zien. Zoals eerder aangegeven is er bij mitochondriale RNA-percentage gekozen voor een grens van 5% omdat de meeste cellen hieronder liggen en alles wat daar boven komt wijst op gestreste of beschadigde cellen. 
 
 **De filtergrenzen zijn bepaald en worden ingezet op de dataset zodat de analyse verder kan zonder invloed van de cellen van verminderde kwaliteit**
 
@@ -346,6 +347,59 @@ top_markers <- control2_all_markers |>
   slice_max(avg_log2FC, n = 1)
 ```
 
+```{r Genexpressie bekijken}
+DotPlot(
+  control2_umap,
+  features = c(
+    "CD3D", "CD3E", "CD2",
+    "CD4", "IL7R",
+    "CD8A", "CD8B", "GZMB",
+    "MS4A1", "CD79A",
+    "NKG7", "GNLY",
+    "CD14", "LYZ",
+    "FCER1A", "CST3",
+    "PPBP",
+    "ISG15", "IFIT1", "IFIT3",
+    "TNF", "IL1B", "NFKBIA",
+    "HLA-DRA", "HLA-DRB1",
+    "FOXP3", "CTLA4", "PDCD1",
+    "GAPDH", "LDHA", "PKM",
+    "HSPA1A", "HSPB1",
+    "JUN", "FOS"
+  ),
+  group.by = "seurat_clusters"
+) +
+  RotatedAxis()
+
+```
+
+![**Tabel 2: Clusters en gevonden genen**](figuren/clusters.png){width=70%}
+
+
+Cluster 0 bestaat uit CD4-T-cellen. De expressie van CD3D, CD3E en CD2 wijst op T-cellen. CD4 en IL7R ondersteunen de classificatie als CD4-T-cellen.
+
+Cluster 1 bestaat eveneens uit CD4-T-cellen. Dezelfde combinatie van T-celmarkers en CD4-markers als bij cluster 0 ondersteunt deze classificatie.
+
+Cluster 2 bestaat uit B-cellen. De hoge expressie van MS4A1 en CD79A is kenmerkend voor B-cellen.
+
+Cluster 3 bestaat uit CD8-T-cellen. De expressie van CD3D, CD3E en CD2 wijst op T-cellen, terwijl CD8A en CD8B aanwijzingen geven voor CD8-T-cellen. NKG7 en GNLY wijzen op een cytotoxisch profiel, maar deze markers komen ook voor bij T-cellen.
+
+Cluster 4 bestaat uit NK-cellen. De expressie van NKG7, GNLY en GZMB ondersteunt deze classificatie.
+
+Cluster 5 bestaat uit CD8-T-cellen. De combinatie van T-celmarkers met CD8A en CD8B ondersteunt deze classificatie. NKG7 en GNLY passen bij cytotoxische activiteit.
+
+Cluster 6 bestaat uit monocyten. De expressie van CD14, LYZ en CST3 ondersteunt deze classificatie. Vooral de expressie van CD14 is hierbij belangrijk.
+
+Cluster 7 is geclassificeerd als NK-cellen. De grote stippen bij NKG7 en GNLY wijzen erop dat deze markers in een groot percentage van de cellen tot expressie komen. De identiteit blijft echter onzeker door de aanwezigheid van IL7R.
+
+Cluster 8 bestaat uit B-cellen. De expressie van MS4A1 en CD79A ondersteunt deze classificatie.
+
+Cluster 9 bestaat eveneens uit B-cellen. Ook hier ondersteunen MS4A1 en CD79A de B-celidentiteit.
+
+Cluster 10 kan niet betrouwbaar worden geclassificeerd. Er is geen duidelijke expressie van de onderzochte celidentiteitsmarkers, waardoor de identiteit niet kan worden vastgesteld.
+
+Cluster 11 bestaat uit T-cellen. De expressie van CD3D, CD3E en CD2 ondersteunt de T-celidentiteit. CD4 en CD8A geven aanwijzingen voor beide subtypen, terwijl NKG7 en GNLY passen bij een cytotoxisch profiel.
+
 ```{r UMAP met annotaties}
 # Set original cluster identities
 Idents(control2_umap) <- "seurat_clusters"
@@ -358,10 +412,10 @@ cluster_celltype_labels <- c(
   "4"  = "NK cells",
   "5"  = "CD8 T-cells",
   "6"  = "Monocytes",
-  "7"  = "Other cells",
+  "7"  = "NK cells",
   "8"  = "B cells",
   "9"  = "B cells",
-  "10" = "Neutrophils",
+  "10" = "Other cells",
   "11" = "T cells"
 )
 
@@ -425,7 +479,7 @@ pt.size = 0.5) + NoLegend()
 # Dataset control1
 Idents(control1_clusters) <- "seurat_clusters"
 
-control1_clusters <- subset(control1_clusters, idents = 1)
+control1_clusters <- subset(control1_clusters, idents = "3")
 
 control1_clusters$dataset <- "control1"
 
@@ -433,7 +487,7 @@ control1_clusters$dataset <- "control1"
 # Dataset control2
 Idents(control2_clusters) <- "seurat_clusters"
 
-control2_clusters <- subset(control2_clusters, idents = 1)
+control2_clusters <- subset(control2_clusters, idents = c("3", "5"))
 
 control2_clusters$dataset <- "control2"
 
