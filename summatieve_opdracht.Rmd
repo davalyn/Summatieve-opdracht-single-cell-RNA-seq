@@ -148,7 +148,7 @@ Op basis van figuur 4 en 5 is er gekozen voor een ondergrens van 300 en een bove
 ```{r Cutoffs keuze}
 # Inspect quality control metrics
 
-# nFeature_RNA: cutoff 6000, omdat 99% van de cellen max 5178 genen heeft
+# nFeature_RNA: cutoff 500–6000, omdat 99% van de cellen min 740 en max 5178 genen heeft
 quantile(control2$nFeature_RNA, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
 
 # nCount_RNA: cutoff 30000, omdat 99% van de cellen max 24735 UMI counts heeft
@@ -288,7 +288,7 @@ Zoals te zien is zijn er duidelijke blokken te zien tot PC9. PC10 begint hierbij
 ```{r UMAP}
 # perform a nearest-neighbor and find clusters
 control2_neighbors <- FindNeighbors(control2_pca, dims = 1:10)
-control2_clusters <- FindClusters(control2_neighbors, resolution = 0.5)
+control2_clusters <- FindClusters(control2_neighbors, resolution = 0.3)
 
 control2_umap <- RunUMAP(control2_clusters, dims = 1:10)
 
