@@ -333,7 +333,7 @@ DimPlot(
   label.size = 5
 )
 ```
-**Figuur 10**
+**Figuur 10:**
 UMAP van longkanker monster.
 
 Uit figuur 10 komt naar voren dat de cellen verdeeld zijn over 12 clusters (0 t/m 11). Cluster 4, 6 en 10 liggen apart van de rest, terwijl andere clusters dichter bij elkaar liggen. Dit laat zien dat er verschillende groepen cellen aanwezig zijn met overeenkomsten en verschillen in genexpressie.De UMAP alleen is echter nog niet genoeg om vast te stellen welke clusters CD8 T-cellen zijn. Elk cluster heeft een expressie van specifieke genen genaamd markergenen. Dat wordt gedaan door middel van celtype annotatie.
@@ -468,8 +468,6 @@ Vooral de CD8 T-cellen zijn belangrijk voor dit onderzoek, aangezien deze later 
 ## Vergelijking
 **Om de celtype-samenstelling van het longkankermonster te vergelijken met een gezond persoon, werd het Seurat-object van control1 ingeladen. Vervolgens werden de clusters voorzien van celtypelabels en werd er een UMAP gemaakt om de verdeling van de celtypen tussen beide monsters te kunnen vergelijken.**
 
-## Vergelijking
-
 ```{r Comparison}
 # Assigning names to the clusters
 cluster_celltype_labels <- c(
@@ -506,7 +504,7 @@ De verdeling van de celtypen ziet er in beide UMAPs (figuur 12 en 13) anders uit
 ---
 
 ## Differentieel genexpressie (DGE) 
-**Na het vergelijken van de celtypen werd er verder gekeken naar de genexpressie van CD8 T-cellen. Hiervoor werden cluster 3 (CD8 T-cellen) van control1 en clusters 3 en 5 (CD8 T-cellen) van het longkankermonster geselecteerd. Vervolgens werden deze cellen samengevoegd en werd er met FindMarkers een differentiële genexpressieanalyse uitgevoerd om te onderzoeken welke genen hoger of lager tot expressie kwamen tussen beide monsters.**
+**Na het vergelijken van de celtypen werd er verder gekeken naar de genexpressie van CD8 T-cellen. Hiervoor werden cluster 3 (CD8 T-cellen) van control1 en clusters 3 en 5 (CD8 T-cellen) van het longkankermonster geselecteerd. Vervolgens werden deze cellen samengevoegd en werd er met FindMarkers een differentiële genexpressieanalyse uitgevoerd om te onderzoeken welke genen hoger of lager tot expressie kwamen tussen beide monsters.Voor het selecteren van de differentieel tot expressie komende genen werd er een aangepaste p-waarde kleiner dan 0,05 en een absolute log2-fold change groter dan 1 gebruikt.**
 ```{r DGE}
 # Dataset control1
 Idents(control1_clusters) <- "seurat_clusters"
@@ -547,12 +545,12 @@ dge_cluster <- FindMarkers(
   logfc.threshold = 0.25
 )
 
-# Select significantly upregulated genes in condition B compared to A
+# Genes with higher expression in control1
 up_genes <- dge_cluster |>
   filter(p_val_adj < 0.05, avg_log2FC > 1) |>
   rownames()
 
-# Select significantly downregulated genes in condition B compared to A
+# Genes with higher expression in lung cancer
 down_genes <- dge_cluster |>
   filter(p_val_adj < 0.05, avg_log2FC < -1) |>
   rownames()
@@ -560,11 +558,12 @@ down_genes <- dge_cluster |>
 # Define the background gene set as all genes detected in the combined cluster
 background_genes <- rownames(combined_cluster)
 ```
+Uit de resultaten komt naar voren dat er 2.048 CD8 T-cellen uit control1 en 2.917 CD8 T-cellen uit het longkankermonster zijn geselecteerd voor de DGE-analyse. Hierbij wordt er onderscheid gemaakt tussen genen die hoger tot expressie komen in control1 en genen die hoger tot expressie komen in het longkankermonster.
 
 ---
 
 ## GO-term enrichment analyse
-
+**Om verder te onderzoeken bij welke biologische processen deze genen betrokken zijn, werd er vervolgens een GO-term enrichment analyse uitgevoerd. Hierbij werden de genen met hogere expressie in control1 en het longkankermonster afzonderlijk onderzocht. De gevonden resultaten werden vervolgens weergegeven in twee dotplots.**
 ```{r GO-term}
 # Perform GO enrichment analysis for upregulated genes
 ego_up <- enrichGO(
@@ -590,6 +589,15 @@ ego_down <- enrichGO(
 # Visualize the GO term analysis for these genes
 dotplot(ego_down)
 ```
+**Figuur 14**
+GO-term enrichment van genen met hogere expressie in control1.
+
+**Figuur 15**
+GO-term enrichment van genen met hogere expressie in het longkankermonster.
+
+Uit figuur 14 komt naar voren dat de genen met hogere expressie in control1 vooral betrokken zijn bij biologische processen zoals *adaptive immune response*, *regulation of lymphocyte activation* en *T cell receptor signaling pathway*. Deze processen hebben te maken met de immuunrespons en de activatie van T-cellen.
+
+In figuur 15 zijn bij het longkankermonster onder andere *regulation of cellular response to stress*, *post-transcriptional regulation of gene expression* en *regulation of adaptive immune response* verrijkt. Daarnaast komen processen zoals *regulation of lymphocyte activation* en *response to virus* bij beide monsters naar voren.
 
 • Welke processen zijn verrijkt?
 
