@@ -9,27 +9,27 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
-```{r Loading libraries}
+```{r Loading libraries, include=FALSE}
 # Load the libraries
-library(dplyr)
-library(Seurat)
-library(tidyverse)
-library(patchwork)
-library(glmGamPoi)
-library(ggplot2)
-library(clusterProfiler)
-library(org.Hs.eg.db)
-library(enrichplot)
+library(dplyr) # filter(), select(), mutate()
+library(Seurat) # NormalizeData(), RunPCA(), FindMarkers()
+library(tidyverse) # tidyr, readr
+library(patchwork) # combining ggplots
+library(glmGamPoi) # SCTransform()
+library(ggplot2) # Violin-, scatter-, PCA plots
+library(clusterProfiler) # GO-term enrichment
+library(org.Hs.eg.db) # Human's genome database
+library(enrichplot) # GO-term plots
 ```
 
-```{r Defining paths}
-# Load the PBMC dataset
+```{r Defining paths, include = FALSE}
+# Load the PBMC dataset with READ10X (Seurat function)
 countmatrix_control2 <- Read10X(data.dir = "/home/daur2/scrnaseq/pbmc/lung_cancer/lung_filtered_feature_bc_matrix/")
 
-# Load the summary
+# Load the summary of the control2
 summary <- read.csv("/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary.csv")
 
-# Load the clusters 
+# Load the clusters of the healthy donor
 control1_clusters <- readRDS(
   "/home/daur2/scrnaseq/pbmc/healthy/control1_filtered_rds/pbmc_control1_clusters.rds")
 ```
@@ -85,30 +85,29 @@ Ook hier geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties
 ```{r Make a countmatrix and a Seurat object}
 # Make a Seurat object
 control2 <- CreateSeuratObject(counts = countmatrix_control2, 
-                           project = "control2", 
-                           min.cells = 3, 
-                           min.features = 200)
+                           project = "control2", # project name inside the Seurat object
+                           min.cells = 3, # a gene must be detected in at least 3 cells
+                           min.features = 200) # a cell must have at least 200 detected genes
 
 # Amount of genes and cells
-dim(control2) # 15.374 genen en 15.725 cellen
+dim(control2) 
 ```
 
-Uit de Seurat komt naar voren dat onze sample bestaat uit 15.374 genen en 15.725 cellen. 
+Uit ons Seurat object blijkt dat de sample bestaat uit 15.374 genen en 15.725 cellen. Bij het aanmaken van het object worden genen die in minder dan 3 cellen voorkomen en cellen met minder dan 200 gedetecteerde genen verwijderd, omdat deze mogelijk afkomstig zijn van lege droplets of cellen van een lage kwaliteit zijn.
 
 **Vervolgens moet er worden gekeken wat de kwaliteit is van onze read. Hiervan is een apart bestand aangeleverd die is ingeladen. Dit bestand is een samenvatting van ons eerder gemaakte Seurat object. Deze samenvatting is vergeleken met een tabel uit een voorgaande opdracht om een conclusie te kunnen trekken over de kwaliteit van onze ruwe data.**
 
 ```{r Quality assessment}
 # Create a filtered summary with the same parameters of table 1
-quality <- summary[c(10, 14, 16, 15, 11), c("Metric.Name", "Metric.Value")]
+quality <- summary[c(10, 14, 16, 15, 11), c("Metric.Name", "Metric.Value")] # (rows) , (columns)
 
-# Assign assessments
+# Adding column "assessment"
 quality$Assessment <- c(
   "High Quality",
   "Moderate Quality",
   "High Quality",
   "High Quality",
-  "High Quality"
-)
+  "High Quality")
 
 # Print the results
 print(quality, row.names = FALSE)
@@ -126,11 +125,11 @@ Er wordt naast doublets ook gekekene naar het percentage mitochondriale RNA-expr
 
 ```{r QC Violin plots}
 # Calculate the mitochondrial percentage for quality control. 
-# The [[ operator ]] can add columns to object metadata.
-control2[["percent.mt"]] <- PercentageFeatureSet(control2, pattern = "^MT-")
+# The [[ operator ]] can add columns to the object
+control2[["percent.mt"]] <- PercentageFeatureSet(control2, pattern = "^MT-") # Counts the % of the MT-genes
 
 # Visualize QC metrics as a violin plot
-VlnPlot(control2, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+VlnPlot(control2, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3) 
 ```
 
 **Figuur 5** 
@@ -141,7 +140,7 @@ Uit figuur 5 nFeature_RNA komt naar voren dat de cellen grotendeels tussen de 1.
 **Naast de violin plots worden scatterplots gebruikt om de samenhang tussen de QC-metrics te analyseren.**
 
 ```{r QC Scatterplots}
-# A scatterplot of nCount (x-as) against nFeature (y-as)
+# Make scatterplot of nCount (x-as) against percent.mt and nFeature (y-as)
 plot1 <- FeatureScatter(control2, feature1 = "nCount_RNA", feature2 = "percent.mt")
 plot2 <- FeatureScatter(control2, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
 plot1 + plot2
@@ -165,18 +164,24 @@ quantile(control2$nCount_RNA, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
 # percent.mt: cutoff 5%, omdat 99% van de cellen max 4.28% mitochondriaal RNA heeft
 quantile(control2$percent.mt, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
 
-# Iets hogere cutoffs zorgen ervoor dat cellen net boven de 99% niet worden verwijderd
-
 # Choose cutoffs
-control2_filtered <- subset(control2, subset = nFeature_RNA > 500 & 
-                              nFeature_RNA < 6000 & percent.mt < 5 & nCount_RNA < 30000)
+control2_filtered <- subset(control2, 
+                            subset = # the conditions must be met for a cell to be included 
+                              nFeature_RNA > 500 & nFeature_RNA < 6000 & 
+                              percent.mt < 5 & nCount_RNA < 30000)
 
 # Amount of the deleted cells
-ncol(control2) - ncol(control2_filtered)
+ncol(control2) - ncol(control2_filtered) # ncol = amount of columns (=cells)
 ```
 
 Na het toepassen van de filtergrenzen zijn er 179 cellen verwijderd. Hierbij blijven er 15.546 cellen over voor verdere analyse. Cellen van verminderde kwaliteit kunnen de downstream analyse van genexpressie en clustering beïnvloeden. Dit kan als gevolg hebben dat CD8 T-cellen mogelijk verkeerd geïdentificeerd worden of verkeerde genexpressies naar voren komen. 
 
+Heel weinig gedetecteerde genen kan wijzen op een cel van lage kwaliteit.
+Heel veel gedetecteerde genen kan wijzen op bijvoorbeeld dubbele cellen (doublets).
+
+Een hoog percentage mitochondriaal RNA kan wijzen op beschadigde of gestreste cellen.
+
+Iets hogere cutoffs zorgen ervoor dat cellen net boven de 99% niet worden verwijderd
 ---
 
 ## Normalizatie
