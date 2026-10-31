@@ -295,6 +295,7 @@ ggplot(pca_df, aes(x = PC, y = PercentVariance)) +
   ) +
   theme_minimal()
 ```
+
 **Figuur 8**  
 Screeplot van de PCA, waarin het percentage verklaarde variantie per principal component wordt weergegeven.
 
@@ -307,6 +308,7 @@ Uit de screeplot komt naar voren dat de eerste 4 PC's de meeste procentuele vari
 DimHeatmap(control2_pca, dims = 1:10, 
            cells = 500, balanced = TRUE) # balanced = selection with high and low scores for balance
 ```
+
 **Figuur 9:**
 Heatmap van de PCA.
 
@@ -318,22 +320,25 @@ Zoals te zien is in figuur 9 laten de eerste 10 PC's duidelijke verschillen zien
 **Om cellen met vergelijkbare genexpressie bij elkaar te groeperen, werd er een clustering uitgevoerd. Met FindNeighbors werd gekeken welke cellen het meest op elkaar leken op basis van de eerste 10 PC's. Vervolgens werden met FindClusters en een resolutie van 0,3 de clusters bepaald. RunUMAP weergeefd deze clusters in een tweedimensionale plot**
 
 ```{r UMAP}
-# Perform a nearest-neighbor and find clusters
+# Perform a nearest-neighbor based on PCA scores and find clusters
 control2_neighbors <- FindNeighbors(control2_pca, dims = 1:10)
-control2_clusters <- FindClusters(control2_neighbors, resolution = 0.3)
 
-# Make an UMAP object
+# Identify clusters based on connections between neighboring cells
+control2_clusters <- FindClusters(control2_neighbors, 
+                                  resolution = 0.3) # gives the same amount of clusters as in control1 UMAP
+
+# Put the values in a Seurat object
 control2_umap <- RunUMAP(control2_clusters, dims = 1:10)
 
-# Plot an UMAP
+# Plot an Uniform Manifold Approximation and Projection 
 DimPlot(
   control2_umap,
   reduction = "umap",
   label = TRUE,
-  label.size = 5
-)
+  label.size = 4.5)
 ```
-**Figuur 10:**
+
+**Figuur 10**
 UMAP van longkanker monster.
 
 Uit figuur 10 komt naar voren dat de cellen verdeeld zijn over 12 clusters (0 t/m 11). Cluster 4, 6 en 10 liggen apart van de rest, terwijl andere clusters dichter bij elkaar liggen. Dit laat zien dat er verschillende groepen cellen aanwezig zijn met overeenkomsten en verschillen in genexpressie.De UMAP alleen is echter nog niet genoeg om vast te stellen welke clusters CD8 T-cellen zijn. Elk cluster heeft een expressie van specifieke genen genaamd markergenen. Dat wordt gedaan door middel van celtype annotatie.
@@ -348,37 +353,39 @@ Uit figuur 10 komt naar voren dat de cellen verdeeld zijn over 12 clusters (0 t/
 # report only the positive ones and combine the results
 clusters <- levels(Idents(control2_clusters))
 
+# Create an empty list
 marker_list <- list()
 
 for (cl in clusters) {
 
+# Find marker genes for each cluster
   marker_list[[cl]] <- FindMarkers(
     control2_clusters,
     ident.1 = cl,
-    only.pos = TRUE,
-    max.cells.per.ident = 1000 
+    only.pos = TRUE, # Only if gene expression is higher in current cluster
+    max.cells.per.ident = 1000 # Added to make it computable easier
   )
 
   gc()
 }
 
-control2_all_markers <- bind_rows(
-  lapply(names(marker_list), function(cl) {
-    marker_list[[cl]] %>%
-      rownames_to_column("gene") %>%
-      mutate(cluster = cl)
-  })
+control2_all_markers <- bind_rows( # Putting multiple tables together 
+  lapply(names(marker_list), function(cl) { 
+    marker_list[[cl]] %>% # Apply this for each cluster
+      rownames_to_column("gene") %>% # Mention the gene's name 
+      mutate(cluster = cl) # Add column cluster
+  }) 
 )
 
-# Save all markers as object
+# Filter all markers based on their avg_log2FC
 control2_all_markers |>
   group_by(cluster) |>
   filter(avg_log2FC > 1)
 
-# Save only top markers as object
+# Save the top markers gene for each cluster
 top_markers <- control2_all_markers |>
   group_by(cluster) |>
-  slice_max(avg_log2FC, n = 1)
+  slice_max(avg_log2FC, n = 1) # 1 gene with highest avg_log2FC per cluster
 ```
 
 ```{r Analyzing gene expression }
@@ -404,8 +411,9 @@ DotPlot(
   ),
   group.by = "seurat_clusters"
 ) +
-  RotatedAxis()
+  RotatedAxis() # Essential here, because of the amount of genes being shown
 ```
+
 **Figuur 11:**
 DotPlot waarin de expressie van bekende markergenen per cluster wordt weergegeven. De grootte van de stippen geeft het percentage cellen aan waarin het gen tot expressie komt en de kleur de gemiddelde geschaalde genexpressie.
 
@@ -413,10 +421,17 @@ DotPlot waarin de expressie van bekende markergenen per cluster wordt weergegeve
 
 Uit figuur 11 en tabel 2 komt naar voren dat de 12 clusters verschillende celtypen bevatten, die op basis van hun markergenen geïdentificeerd kunnen worden:
 
-Clusters 0 en 1 zijn geïdentificeerd als CD4 T-cellen. De expressie van CD3D, CD3E en CD2 wijst op T-cellen, terwijl CD4 en IL7R deze classificatie verder ondersteunen. Bij cluster 1 is dezelfde combinatie van markergenen te zien als bij cluster 0. Cluster 2 is geïdentificeerd als B-cellen, aangezien de hoge expressie van MS4A1 en CD79A kenmerkend is voor dit celtype.
-Voor dit onderzoek zijn vooral **clusters 3 en 5** belangrijk, omdat deze als CD8 T-cellen zijn geïdentificeerd. Bij cluster 3 wijst de expressie van CD3D, CD3E en CD2 op T-cellen, terwijl CD8A en CD8B de classificatie als CD8 T-cellen ondersteunen. Daarnaast zijn ook cytotoxische markers zoals GZMB, NKG7 en GNLY aanwezig. Deze markers wijzen op een cytotoxisch profiel, maar komen ook bij NK-cellen voor. Bij cluster 5 is een vergelijkbare combinatie van T-celmarkers, CD8A en CD8B zichtbaar. Ook hier passen NKG7 en GNLY bij een cytotoxisch profiel. Dit maakt beide clusters relevant voor het verdere onderzoek naar cytotoxiciteit bij CD8 T-cellen.
-Cluster 4 is geïdentificeerd als NK-cellen door de expressie van NKG7, GNLY en GZMB. Deze genen zijn betrokken bij cytotoxiciteit en ondersteunen hiermee de classificatie als NK-cellen. Cluster 6 is geclassificeerd als monocyten door de expressie van CD14, LYZ en CST3. Vooral CD14 is hierbij belangrijk, omdat dit een bekende marker is voor monocyten. In de markertabel is ook CD4 bij dit cluster aanwezig. Cluster 7 is voorlopig als NK-cellen geclassificeerd. De grote stippen bij NKG7 en GNLY laten zien dat deze genen in een groot percentage van de cellen tot expressie komen. De aanwezigheid van IL7R maakt deze classificatie echter minder zeker.
-Clusters 8 en 9 zijn, net zoals cluster 2, geïdentificeerd als B-cellen. Bij beide clusters is expressie van MS4A1 en CD79A zichtbaar, wat de classificatie als B-cellen ondersteunt. Cluster 10 kon niet betrouwbaar worden geïdentificeerd, aangezien er geen duidelijke expressie van de onderzochte celidentiteitsmarkers zichtbaar is. Hierdoor blijft het celtype van dit cluster onbekend.
+Clusters 0 en 1 zijn geïdentificeerd als CD4 T-cellen. De expressie van CD3D, CD3E en CD2 wijst op T-cellen, terwijl CD4 en IL7R deze classificatie verder ondersteunen. 
+Bij cluster 1 is dezelfde combinatie van markergenen te zien als bij cluster 0. 
+Cluster 2 is geïdentificeerd als B-cellen, aangezien de hoge expressie van MS4A1 en CD79A kenmerkend is voor dit celtype.
+Voor dit onderzoek zijn vooral **clusters 3 en 5** belangrijk, omdat deze als CD8 T-cellen zijn geïdentificeerd. 
+Bij cluster 3 wijst de expressie van CD3D, CD3E en CD2 op T-cellen, terwijl CD8A en CD8B de classificatie als CD8 T-cellen ondersteunen. Daarnaast zijn ook cytotoxische markers zoals GZMB, NKG7 en GNLY aanwezig. Deze markers wijzen op een cytotoxisch profiel, maar komen ook bij NK-cellen voor. 
+Bij cluster 5 is een vergelijkbare combinatie van T-celmarkers, CD8A en CD8B zichtbaar. Ook hier passen NKG7 en GNLY bij een cytotoxisch profiel. Dit maakt beide clusters relevant voor het verdere onderzoek naar cytotoxiciteit bij CD8 T-cellen.
+Cluster 4 is geïdentificeerd als NK-cellen door de expressie van NKG7, GNLY en GZMB. Deze genen zijn betrokken bij cytotoxiciteit en ondersteunen hiermee de classificatie als NK-cellen. 
+Cluster 6 is geclassificeerd als monocyten door de expressie van CD14, LYZ en CST3. Vooral CD14 is hierbij belangrijk, omdat dit een bekende marker is voor monocyten. In de markertabel is ook CD4 bij dit cluster aanwezig. 
+Cluster 7 is voorlopig als NK-cellen geclassificeerd. De grote stippen bij NKG7 en GNLY laten zien dat deze genen in een groot percentage van de cellen tot expressie komen. De aanwezigheid van IL7R maakt deze classificatie echter minder zeker.
+Clusters 8 en 9 zijn, net zoals cluster 2, geïdentificeerd als B-cellen. Bij beide clusters is expressie van MS4A1 en CD79A zichtbaar, wat de classificatie als B-cellen ondersteunt. 
+Cluster 10 kon niet betrouwbaar worden geïdentificeerd, aangezien er geen duidelijke expressie van de onderzochte celidentiteitsmarkers zichtbaar is. Hierdoor blijft het celtype van dit cluster onbekend.
 Cluster 11 is geïdentificeerd als T-cellen door de expressie van CD3D, CD3E en CD2. Daarnaast zijn zowel CD4 als CD8A aanwezig, wat aanwijzingen geeft voor verschillende T-celsubtypen. Ook NKG7 en GNLY komen tot expressie en passen bij een cytotoxisch profiel. Hierdoor kan dit cluster niet duidelijk als CD4 of CD8 T-cellen worden geclassificeerd.
 
 Over het algemeen worden de meeste annotaties ondersteund door de expressie van meerdere bekende markergenen. Toch zijn niet alle clusters even betrouwbaar geïdentificeerd, omdat sommige markers bij meerdere celtypen voorkomen. Vooral bij clusters 7, 10 en 11 blijven er onzekerhden bestaan. De combinatie van T-celmarkers en CD8-markers bij clusters 3 en 5 ondersteunt de classificatie als CD8 T-cellen. Daarom zijn deze clusters geselecteerd voor de verdere vergelijking met de CD8 T-cellen van control1.
@@ -425,7 +440,7 @@ Over het algemeen worden de meeste annotaties ondersteund door de expressie van 
 
 ```{r Annotated UMAP}
 # Set original cluster identities
-Idents(control2_umap) <- "seurat_clusters"
+Idents(control2_umap) <- "seurat_clusters" 
 
 # Assign names to the clusters
 cluster_celltype_labels <- c(
@@ -443,20 +458,20 @@ cluster_celltype_labels <- c(
   "11" = "T cells"
 )
 
-# Rename cluster identities
+# Match cluster names with their corresponding cell type labels
 names(cluster_celltype_labels) <- levels(control2_umap)
 
-control2_umap <- RenameIdents(
-  control2_umap,
-  cluster_celltype_labels)
+# Change cluster identities with their assigned names
+control2_umap <- RenameIdents(control2_umap, cluster_celltype_labels)
 
 # Visualize annotated clusters
 DimPlot(
   control2_umap,
   reduction = "umap",
   label = TRUE,
-  pt.size = 0.5) + NoLegend()
+  label.size = 4.5) 
 ``` 
+
 **Figuur 12:**
 Geannoteerde UMAP van het longkankermonster. De verschillende kleuren geven aan welke cellen tot hetzelfde celtype behoren.
 
@@ -482,10 +497,12 @@ cluster_celltype_labels <- c(
 "8" = "NK cells",
 "9" = "Monocytes",
 "10" = "Dendritic cells",
-"11" = "B cells"
-)
+"11" = "B cells")
 
+# Match cluster names with their corresponding cell type labels
 names(cluster_celltype_labels) <- levels(control1_clusters)
+
+# Change cluster identities with their assigned names
 control1_clusters <- RenameIdents(control1_clusters, cluster_celltype_labels)
 
 # Visualize annotated clusters
@@ -493,8 +510,9 @@ DimPlot(
 control1_clusters,
 reduction = "umap",
 label = TRUE,
-pt.size = 0.5) + NoLegend()
+label.size = 4.5) 
 ```
+
 **Figuur 13:**
 Geannoteerde UMAP van control1 waarbij de verschillende clusters zijn weergegeven met diens bijbehorende celtypen.
 
