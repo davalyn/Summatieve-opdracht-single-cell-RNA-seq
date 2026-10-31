@@ -95,6 +95,7 @@ summary <- read.csv("/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary
 # Create a filtered summary with the same parameters of table 1
 quality <- summary[c(10, 14, 16, 15, 11), c("Metric.Name", "Metric.Value")]
 
+# Assign assessments
 quality$Assessment <- c(
   "High Quality",
   "Moderate Quality",
@@ -103,6 +104,7 @@ quality$Assessment <- c(
   "High Quality"
 )
 
+# Print the results
 print(quality, row.names = FALSE)
 ```
 
@@ -164,7 +166,7 @@ quantile(control2$percent.mt, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
 control2_filtered <- subset(control2, subset = nFeature_RNA > 500 & 
                               nFeature_RNA < 6000 & percent.mt < 5 & nCount_RNA < 30000)
 
-# Aantal verwijderde cellen
+# Amount of the deleted cells
 ncol(control2) - ncol(control2_filtered)
 ```
 
@@ -238,7 +240,6 @@ De elbowplot laat zien dat PC 1 tot en met 4 de meeste variatie laten zien in st
 **Om een beter overzicht te krijgen hoeveel procent variatie elk punt weergeeft, is er een scree plot gemaakt. Een scree plot laat de variatie in procenten zien in plaats van in standaarddeviatie.**
 
 ```{r PCA scree plot}
-# Make a scree plot 
 # Extract standard deviations from PCA
 pca_sd <- control2_pca[["pca"]]@stdev
 
@@ -254,6 +255,7 @@ pca_df <- data.frame(
   PercentVariance = pca_variance_percent
 )
 
+# Plot a scree plot 
 ggplot(pca_df, aes(x = PC, y = PercentVariance)) +
   geom_point(size = 2) +
   geom_line() +
@@ -273,7 +275,6 @@ Uit de screeplot komt naar voren dat de eerste 4 PC's de meeste procentuele vari
 
 ```{r Heatmap}
 # Plot a heatmap of genes for each PC
-# dims = PC1 up to PC15 - adjust when necessary 
 DimHeatmap(control2_pca, dims = 1:10, cells = 500, balanced = TRUE) 
 ```
 
@@ -287,12 +288,14 @@ Zoals te zien is zijn er duidelijke blokken te zien tot PC9. PC10 begint hierbij
 ## Clustering en UMAP
 
 ```{r UMAP}
-# perform a nearest-neighbor and find clusters
+# Perform a nearest-neighbor and find clusters
 control2_neighbors <- FindNeighbors(control2_pca, dims = 1:10)
 control2_clusters <- FindClusters(control2_neighbors, resolution = 0.3)
 
+# Make an UMAP object
 control2_umap <- RunUMAP(control2_clusters, dims = 1:10)
 
+# Plot an UMAP
 DimPlot(
   control2_umap,
   reduction = "umap",
@@ -338,16 +341,19 @@ control2_all_markers <- bind_rows(
   })
 )
 
+# Save all markers as object
 control2_all_markers |>
   group_by(cluster) |>
   filter(avg_log2FC > 1)
 
+# Save only top markers as object
 top_markers <- control2_all_markers |>
   group_by(cluster) |>
   slice_max(avg_log2FC, n = 1)
 ```
 
 ```{r Genexpressie bekijken}
+# Make a dotplot with all of the marker genes
 DotPlot(
   control2_umap,
   features = c(
@@ -370,7 +376,6 @@ DotPlot(
   group.by = "seurat_clusters"
 ) +
   RotatedAxis()
-
 ```
 
 ![**Tabel 2: Clusters en gevonden genen**](figuren/clusters.png){width=70%}
@@ -404,6 +409,7 @@ Cluster 11 bestaat uit T-cellen. De expressie van CD3D, CD3E en CD2 ondersteunt 
 # Set original cluster identities
 Idents(control2_umap) <- "seurat_clusters"
 
+# Assign names to the clusters
 cluster_celltype_labels <- c(
   "0"  = "CD4 T cells",
   "1"  = "CD4 T cells",
@@ -442,8 +448,10 @@ DimPlot(
 ## Vergelijking
 
 ```{r vergelijking}
+# Saving rds object as a variable
 control1_clusters <- readRDS("/home/daur2/scrnaseq/pbmc/healthy/control1_filtered_rds/pbmc_control1_clusters.rds")
 
+# Assigning names to the clusters
 cluster_celltype_labels <- c(
 "0" = "T cells",
 "1" = "CD4 T cells",
@@ -462,6 +470,7 @@ cluster_celltype_labels <- c(
 names(cluster_celltype_labels) <- levels(control1_clusters)
 control1_clusters <- RenameIdents(control1_clusters, cluster_celltype_labels)
 
+# Visualize annotated clusters
 DimPlot(
 control1_clusters,
 reduction = "umap",
@@ -478,35 +487,35 @@ pt.size = 0.5) + NoLegend()
 ```{r DGE}
 # Dataset control1
 Idents(control1_clusters) <- "seurat_clusters"
-
 control1_clusters <- subset(control1_clusters, idents = "3")
-
 control1_clusters$dataset <- "control1"
-
 
 # Dataset control2
 Idents(control2_clusters) <- "seurat_clusters"
-
 control2_clusters <- subset(control2_clusters, idents = c("3", "5"))
-
 control2_clusters$dataset <- "control2"
 
-# Clusters combineren
+# Combining clusters 
 combined_cluster <- merge(
   control1_clusters,
-  control2_clusters
-)
+  control2_clusters)
 
+# Save different data layers in a Seurat object
 combined_cluster <- JoinLayers(combined_cluster)
 
+# Set the RNA as the assay for the analysis
 DefaultAssay(combined_cluster) <- "RNA"
 
+# Use the dataset as the identity class for comparing
 Idents(combined_cluster) <- "dataset"
 
+# Check the identity groups 
 levels(Idents(combined_cluster))
 
+# Check the number of cells
 table(combined_cluster$dataset)
 
+# Perform DGE between control1 and control2
 dge_cluster <- FindMarkers(
   combined_cluster,
   ident.1 = "control1",
@@ -541,6 +550,7 @@ ego_up <- enrichGO(
   ont      = "BP"
 )
 
+# Visualize the GO term analysis for these genes
 dotplot(ego_up)
 
 # Perform GO enrichment analysis for downregulated genes
@@ -552,6 +562,7 @@ ego_down <- enrichGO(
   ont      = "BP"
 )
 
+# Visualize the GO term analysis for these genes
 dotplot(ego_down)
 ```
 
