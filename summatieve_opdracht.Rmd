@@ -5,8 +5,33 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r Setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r Loading libraries}
+# Load the libraries
+library(dplyr)
+library(Seurat)
+library(tidyverse)
+library(patchwork)
+library(glmGamPoi)
+library(ggplot2)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+library(enrichplot)
+```
+
+```{r Defining paths}
+# Load the PBMC dataset
+countmatrix_control2 <- Read10X(data.dir = "/home/daur2/scrnaseq/pbmc/lung_cancer/lung_filtered_feature_bc_matrix/")
+
+# Load the summary
+summary <- read.csv("/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary.csv")
+
+# Load the clusters 
+control1_clusters <- readRDS(
+  "/home/daur2/scrnaseq/pbmc/healthy/control1_filtered_rds/pbmc_control1_clusters.rds")
 ```
 
 ---
@@ -25,6 +50,7 @@ De verwachting is dat er mogelijk een lager aandeel CD8 T-cellen aanwezig zullen
 ---
 
 ## Kwaliteitscontrole van single-cell data
+
 **Eerst werden de FASTQ en FASTQC rapporten van het kankermonster geanalyseerd. Het bestond uit vier reads genaamd R1, R2, I1 en I2. R1 bevatte de cell barcode en UMI. R2 bevatte de biologische transcript sequentie voor genexpressie analyse. I1 en I2 zijn indexsequenties van illumina die voor sample identificatie dienen.**
 
 De readkwaliteit is over het algemeen heel goed. Per base sequence quality heeft in bijna elk monster een Q-score van 30+ (oftewel 99,9% nauwkeurigheid), wat standaard een benchmark is in next-generation sequencing voor base calling nauwkeurigheid. Er zijn 2 posities waar de kwaliteit duidelijk afneemt: bp 1 in monster I2 en bp 61–66 in monster R2. Ondanks deze uitschieters blijven de Q-scores hoger dan respectievelijk 25 en 30.
@@ -52,29 +78,14 @@ Geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties over all
 Ook hier geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties is 0%
 
 ---
-```{r Alle libraries laden}
-# Load the libraries
-library(dplyr)
-library(Seurat)
-library(tidyverse)
-library(patchwork)
-library(glmGamPoi)
-library(ggplot2)
-library(clusterProfiler)
-library(org.Hs.eg.db)
-library(enrichplot)
-```
 
 ## Een countmatrix en een Seurat object aanmaken
+
 **De illumina reads zijn op zichzelf niet bruikbaar voor downstream analyse. Hiervoor moeten deze reads eerst door middel van het programma Cell Ranger eerst verwerkt en geteld worden tot een countmatrix. Cell Ranger koppelde de sequencingreads aan de bijbehorende genen en cellen en telde met behulp van UMI's het aantal gedetecteerde RNA-moleculen per gen per cel. Om de dataset uit Cell Ranger in te lezen is er gebruik gemaakt van de code "Read10X" waarbij er vervolgens een Seurat object van gemaakt kon worden. Een Seurat object is de vorm van data waarmee de verdere downstream analyses mee gedaan worden.**
 
-```{r een countmatrix en een Seurat object aanmaken}
-
-# Load the PBMC dataset
-countmatrix_long <- Read10X(data.dir = "/home/daur2/scrnaseq/pbmc/lung_cancer/lung_filtered_feature_bc_matrix/")
-
+```{r Make a countmatrix and a Seurat object}
 # Make a Seurat object
-control2 <- CreateSeuratObject(counts = countmatrix_long, 
+control2 <- CreateSeuratObject(counts = countmatrix_control2, 
                            project = "control2", 
                            min.cells = 3, 
                            min.features = 200)
@@ -87,11 +98,7 @@ Uit de Seurat komt naar voren dat onze sample bestaat uit 15.374 genen en 15.725
 
 **Vervolgens moet er worden gekeken wat de kwaliteit is van onze read. Hiervan is een apart bestand aangeleverd die is ingeladen. Dit bestand is een samenvatting van ons eerder gemaakte Seurat object. Deze samenvatting is vergeleken met een tabel uit een voorgaande opdracht om een conclusie te kunnen trekken over de kwaliteit van onze ruwe data.**
 
-```{r quality assessment}
-
-# Load the summary
-summary <- read.csv("/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary.csv")
-
+```{r Quality assessment}
 # Create a filtered summary with the same parameters of table 1
 quality <- summary[c(10, 14, 16, 15, 11), c("Metric.Name", "Metric.Value")]
 
@@ -118,7 +125,7 @@ Het summary bestand is gefilterd met dezelfde parameters als bij tabel 1 van de 
 **Nu uit de initiële kwaliteitscontrole is gebleken dat de ruwe sequencingdata van voldoende kwaliteit is, worden de idividiuele cellen gecontroleerd op mogelijke outliers. Er wordt hier met name gekeken naar cellen die een opvallend hoog aantal genen vertonen, wat mogelijk wijst op doublets; doublets zijn cellen die tijdens het sequencingproces als één cel worden gezien. 
 Er wordt naast doublets ook gekekene naar het percentage mitochondriale RNA-expressie, aangezien een verhoogd percentage ervan kan wijzen op beschadigde of gestreste cellen. Dit wordt gedaan door middel van violin plots die deze outliers laten zien, zodat deze vervolgens weggefilterd kunnen worden voor het analyseproces en dus niet een belemmering zullen vormen.**
 
-```{r Violin plots}
+```{r QC Violin plots}
 # Calculate the mitochondrial percentage for quality control. 
 # The [[ operator ]] can add columns to object metadata.
 control2[["percent.mt"]] <- PercentageFeatureSet(control2, pattern = "^MT-")
@@ -134,7 +141,7 @@ Uit figuur 5 nFeature_RNA komt naar voren dat de cellen grotendeels tussen de 1.
 
 **Naast de violin plots worden scatterplots gebruikt om de samenhang tussen de QC-metrics te analyseren.**
 
-```{r Scatterplots}
+```{r QC Scatterplots}
 # A scatterplot of nCount (x-as) against nFeature (y-as)
 plot1 <- FeatureScatter(control2, feature1 = "nCount_RNA", feature2 = "percent.mt")
 plot2 <- FeatureScatter(control2, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
@@ -148,8 +155,7 @@ Op basis van figuur 5 en 6 is er gekozen voor een ondergrens van 300 en een bove
 
 **De filtergrenzen zijn bepaald en worden ingezet op de dataset zodat de analyse verder kan zonder invloed van de cellen van verminderde kwaliteit**
 
-```{r Cutoffs keuze}
-# Inspect quality control metrics
+```{r Choose cutoffs }
 
 # nFeature_RNA: cutoff 500–6000, omdat 99% van de cellen min 740 en max 5178 genen heeft
 quantile(control2$nFeature_RNA, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
@@ -162,7 +168,7 @@ quantile(control2$percent.mt, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
 
 # Iets hogere cutoffs zorgen ervoor dat cellen net boven de 99% niet worden verwijderd
 
-# Choosing cutoffs
+# Choose cutoffs
 control2_filtered <- subset(control2, subset = nFeature_RNA > 500 & 
                               nFeature_RNA < 6000 & percent.mt < 5 & nCount_RNA < 30000)
 
@@ -175,9 +181,10 @@ Cellen van verminderde kwaliteit kunnen de downstream analyse van genexpressie e
 ---
 
 ## Normalizatie
+
 **Na het filteren van de cellen werd de dataset genormaliseerd met behulp van de LogNormalize-methode. Dit werd gedaan aangezien cellen van elkaar onderling veel kunnen verschillen qua gemeten UMI's, waardoor vergelijkingen met elkaar niet mogelijk zijn. Met LogNormalize werden de UMI's per cel gecorrigeerd, vermenigvuldigd met een schaal van 10.000 en vervolgens logaritmisch getransformeerd waardoor verdere analyse beter zal verlopen.**
 
-```{r Normalizatie}
+```{r Normalisation}
 # Apply LogNormalize
 control2_lognorm <- NormalizeData(
   object = control2_filtered,  
@@ -223,7 +230,9 @@ control2_scaled <- ScaleData(control2_vf2000)
 ---
 
 ## PCA
+
 **Na het schalen van de dataset werd PCA uitgevoerd om de variaties in genexpressie weer te geven. Dit werd gedaan in PC's. Door middel van elbow plots en een scree plot kon er gekeken worden hoeveel variaties in genexpressie elke PC bevat. Aan de hand van de elbow plot en scree plot kon er een besluit gemaakt worden met hoeveel PC's er verder gewerkt zou worden voor verdere downstream analyse. In dit geval de clustering**
+
 ```{r PCA elbow plot}
 # Calculate Principal components
 control2_pca <- RunPCA(control2_scaled)
@@ -314,7 +323,7 @@ DimPlot(
 
 ## Celtype annotatie
 
-```{r Markers vinden}
+```{r Find markers }
 # Find the markers for each cluster compared to all remaining cells,
 # report only the positive ones and combine the results
 clusters <- levels(Idents(control2_clusters))
@@ -352,7 +361,7 @@ top_markers <- control2_all_markers |>
   slice_max(avg_log2FC, n = 1)
 ```
 
-```{r Genexpressie bekijken}
+```{r Analyzing gene expression }
 # Make a dotplot with all of the marker genes
 DotPlot(
   control2_umap,
@@ -405,7 +414,7 @@ Cluster 10 kan niet betrouwbaar worden geclassificeerd. Er is geen duidelijke ex
 
 Cluster 11 bestaat uit T-cellen. De expressie van CD3D, CD3E en CD2 ondersteunt de T-celidentiteit. CD4 en CD8A geven aanwijzingen voor beide subtypen, terwijl NKG7 en GNLY passen bij een cytotoxisch profiel.
 
-```{r UMAP met annotaties}
+```{r Annotated UMAP}
 # Set original cluster identities
 Idents(control2_umap) <- "seurat_clusters"
 
@@ -430,8 +439,7 @@ names(cluster_celltype_labels) <- levels(control2_umap)
 
 control2_umap <- RenameIdents(
   control2_umap,
-  cluster_celltype_labels
-)
+  cluster_celltype_labels)
 
 # Visualize annotated clusters
 DimPlot(
@@ -445,12 +453,11 @@ DimPlot(
 
 • Welke celtypes domineren in het kankermonster?
 
+---
+
 ## Vergelijking
 
-```{r vergelijking}
-# Saving rds object as a variable
-control1_clusters <- readRDS("/home/daur2/scrnaseq/pbmc/healthy/control1_filtered_rds/pbmc_control1_clusters.rds")
-
+```{r Comparison}
 # Assigning names to the clusters
 cluster_celltype_labels <- c(
 "0" = "T cells",
@@ -481,6 +488,8 @@ pt.size = 0.5) + NoLegend()
 • Zie je dezelfde globale celtypen terug?
 
 • Lijken de verhoudingen tussen celtypen of clusters vergelijkbaar?
+
+---
 
 ## Differentieel genexpressie (DGE) 
 
@@ -538,6 +547,8 @@ down_genes <- dge_cluster |>
 background_genes <- rownames(combined_cluster)
 ```
 
+---
+
 ## GO-term enrichment analyse
 
 ```{r GO-term}
@@ -573,6 +584,8 @@ dotplot(ego_down)
 Let op:
 
 • Grote verschillen zijn niet verwacht tussen twee gezonde controles → bespreek waarom.
+
+---
 
 ## Conclusie
 
