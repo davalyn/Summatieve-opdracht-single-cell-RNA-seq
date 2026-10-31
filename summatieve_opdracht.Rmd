@@ -5,8 +5,33 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r Setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r Loading libraries}
+# Load the libraries
+library(dplyr)
+library(Seurat)
+library(tidyverse)
+library(patchwork)
+library(glmGamPoi)
+library(ggplot2)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+library(enrichplot)
+```
+
+```{r Defining paths}
+# Load the PBMC dataset
+countmatrix_control2 <- Read10X(data.dir = "/home/daur2/scrnaseq/pbmc/lung_cancer/lung_filtered_feature_bc_matrix/")
+
+# Load the summary
+summary <- read.csv("/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary.csv")
+
+# Load the clusters 
+control1_clusters <- readRDS(
+  "/home/daur2/scrnaseq/pbmc/healthy/control1_filtered_rds/pbmc_control1_clusters.rds")
 ```
 
 ---
@@ -52,29 +77,14 @@ Geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties over all
 Ook hier geen adaptercontaminatie gedetecteerd. Het percentage adaptersequenties is 0%
 
 ---
-```{r Alle libraries laden}
-# Load the libraries
-library(dplyr)
-library(Seurat)
-library(tidyverse)
-library(patchwork)
-library(glmGamPoi)
-library(ggplot2)
-library(clusterProfiler)
-library(org.Hs.eg.db)
-library(enrichplot)
-```
 
 ## Een countmatrix en een Seurat object aanmaken
+
 **De illumina reads zijn op zichzelf niet bruikbaar voor downstream analyse. Hiervoor moeten deze reads eerst door middel van het programma Cell Ranger eerst verwerkt en geteld worden tot een countmatrix. Cell Ranger koppelde de sequencingreads aan de bijbehorende genen en cellen en telde met behulp van UMI's het aantal gedetecteerde RNA-moleculen per gen per cel. Om de dataset uit Cell Ranger in te lezen is er gebruik gemaakt van de code "Read10X" waarbij er vervolgens een Seurat object van gemaakt kon worden. Een Seurat object is de vorm van data waarmee de verdere downstream analyses mee gedaan worden.**
 
-```{r een countmatrix en een Seurat object aanmaken}
-
-# Load the PBMC dataset
-countmatrix_long <- Read10X(data.dir = "/home/daur2/scrnaseq/pbmc/lung_cancer/lung_filtered_feature_bc_matrix/")
-
+```{r Make a countmatrix and a Seurat object}
 # Make a Seurat object
-control2 <- CreateSeuratObject(counts = countmatrix_long, 
+control2 <- CreateSeuratObject(counts = countmatrix_control2, 
                            project = "control2", 
                            min.cells = 3, 
                            min.features = 200)
@@ -87,14 +97,11 @@ Uit de Seurat komt naar voren dat onze sample bestaat uit 15.374 genen en 15.725
 
 **Vervolgens moet er worden gekeken wat de kwaliteit is van onze read. Hiervan is een apart bestand aangeleverd die is ingeladen. Dit bestand is een samenvatting van ons eerder gemaakte Seurat object. Deze samenvatting is vergeleken met een tabel uit een voorgaande opdracht om een conclusie te kunnen trekken over de kwaliteit van onze ruwe data.**
 
-```{r quality assessment}
-
-# Load the summary
-summary <- read.csv("/home/daur2/scrnaseq/pbmc/lung_cancer/lung__metrics_summary.csv")
-
+```{r Quality assessment}
 # Create a filtered summary with the same parameters of table 1
 quality <- summary[c(10, 14, 16, 15, 11), c("Metric.Name", "Metric.Value")]
 
+# Assign assessments
 quality$Assessment <- c(
   "High Quality",
   "Moderate Quality",
@@ -103,6 +110,7 @@ quality$Assessment <- c(
   "High Quality"
 )
 
+# Print the results
 print(quality, row.names = FALSE)
 ```
 
@@ -116,7 +124,7 @@ Het summary bestand is gefilterd met dezelfde parameters als bij tabel 1 van de 
 **Nu uit de initiële kwaliteitscontrole is gebleken dat de ruwe sequencingdata van voldoende kwaliteit is, worden de idividiuele cellen gecontroleerd op mogelijke outliers. Er wordt hier met name gekeken naar cellen die een opvallend hoog aantal genen vertonen, wat mogelijk wijst op doublets; doublets zijn cellen die tijdens het sequencingproces als één cel worden gezien. 
 Er wordt naast doublets ook gekekene naar het percentage mitochondriale RNA-expressie, aangezien een verhoogd percentage ervan kan wijzen op beschadigde of gestreste cellen. Dit wordt gedaan door middel van violin plots die deze outliers laten zien, zodat deze vervolgens weggefilterd kunnen worden voor het analyseproces en dus niet een belemmering zullen vormen.**
 
-```{r Violin plots}
+```{r QC Violin plots}
 # Calculate the mitochondrial percentage for quality control. 
 # The [[ operator ]] can add columns to object metadata.
 control2[["percent.mt"]] <- PercentageFeatureSet(control2, pattern = "^MT-")
@@ -132,7 +140,7 @@ Uit figuur 5 nFeature_RNA komt naar voren dat de cellen grotendeels tussen de 1.
 
 **Naast de violin plots worden scatterplots gebruikt om de samenhang tussen de QC-metrics te analyseren.**
 
-```{r Scatterplots}
+```{r QC Scatterplots}
 # A scatterplot of nCount (x-as) against nFeature (y-as)
 plot1 <- FeatureScatter(control2, feature1 = "nCount_RNA", feature2 = "percent.mt")
 plot2 <- FeatureScatter(control2, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
@@ -146,8 +154,7 @@ Op basis van figuur 5 en 6 is er gekozen voor een ondergrens van 500 en een bove
 
 **De filtergrenzen werden bepaald en ingezet op de dataset zodat de analyse verder kon zonder invloed van de cellen van verminderde kwaliteit**
 
-```{r Cutoffs keuze}
-# Inspect quality control metrics
+```{r Choose cutoffs }
 
 # nFeature_RNA: cutoff 500–6000, omdat 99% van de cellen min 740 en max 5178 genen heeft
 quantile(control2$nFeature_RNA, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
@@ -160,11 +167,11 @@ quantile(control2$percent.mt, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
 
 # Iets hogere cutoffs zorgen ervoor dat cellen net boven de 99% niet worden verwijderd
 
-# Choosing cutoffs
+# Choose cutoffs
 control2_filtered <- subset(control2, subset = nFeature_RNA > 500 & 
                               nFeature_RNA < 6000 & percent.mt < 5 & nCount_RNA < 30000)
 
-# Aantal verwijderde cellen
+# Amount of the deleted cells
 ncol(control2) - ncol(control2_filtered)
 ```
 
@@ -173,9 +180,10 @@ Na het toepassen van de filtergrenzen zijn er 179 cellen verwijderd. Hierbij bli
 ---
 
 ## Normalizatie
+
 **Na het filteren van de cellen werd de dataset genormaliseerd met behulp van de LogNormalize-methode. Dit werd gedaan aangezien cellen van elkaar onderling veel kunnen verschillen qua gemeten UMI's, waardoor vergelijkingen met elkaar niet mogelijk zijn. Met LogNormalize werden de UMI's per cel gecorrigeerd, vermenigvuldigd met een schaal van 10.000 en vervolgens logaritmisch getransformeerd waardoor verdere analyse beter zal verlopen.**
 
-```{r Normalizatie}
+```{r Normalisation}
 # Apply LogNormalize
 control2_lognorm <- NormalizeData(
   object = control2_filtered,  
@@ -223,7 +231,9 @@ Uit de VariableFeaturePlot komt naar voren dat bepaalde genen een hogere variati
 ---
 
 ## PCA
+
 **Na het schalen van de dataset werd PCA uitgevoerd om de variaties in genexpressie weer te geven. Dit werd gedaan in PC's. Door middel van elbow plots en een scree plot kon er gekeken worden hoeveel variaties in genexpressie elke PC bevat. Aan de hand van de elbow plot en scree plot kon er een besluit gemaakt worden met hoeveel PC's er verder gewerkt zou worden voor verdere downstream analyse. In dit geval de clustering**
+
 ```{r PCA elbow plot}
 # Calculate Principal components
 control2_pca <- RunPCA(control2_scaled)
@@ -240,7 +250,6 @@ De elbowplot laat zien dat PC 1 tot en met 4 de meeste variatie laten zien in st
 **Om een beter overzicht te krijgen hoeveel procent variatie elk punt weergeeft, is er een scree plot gemaakt. Een scree plot laat de variatie in procenten zien in plaats van in standaarddeviatie.**
 
 ```{r PCA scree plot}
-# Make a scree plot 
 # Extract standard deviations from PCA
 pca_sd <- control2_pca[["pca"]]@stdev
 
@@ -256,6 +265,7 @@ pca_df <- data.frame(
   PercentVariance = pca_variance_percent
 )
 
+# Plot a scree plot 
 ggplot(pca_df, aes(x = PC, y = PercentVariance)) +
   geom_point(size = 2) +
   geom_line() +
@@ -275,7 +285,6 @@ Uit de screeplot komt naar voren dat de eerste 4 PC's de meeste procentuele vari
 
 ```{r Heatmap}
 # Plot a heatmap of genes for each PC
-# dims = PC1 up to PC15 - adjust when necessary 
 DimHeatmap(control2_pca, dims = 1:10, cells = 500, balanced = TRUE) 
 ```
 **Figuur 9:**
@@ -289,12 +298,14 @@ Zoals te zien is in figuur 9 laten de eerste 10 PC's duidelijke verschillen zien
 **Om cellen met vergelijkbare genexpressie bij elkaar te groeperen, werd er een clustering uitgevoerd. Met FindNeighbors werd gekeken welke cellen het meest op elkaar leken op basis van de eerste 10 PC's. Vervolgens werden met FindClusters en een resolutie van 0,3 de clusters bepaald. RunUMAP weergeefd deze clusters in een tweedimensionale plot**
 
 ```{r UMAP}
-# perform a nearest-neighbor and find clusters
+# Perform a nearest-neighbor and find clusters
 control2_neighbors <- FindNeighbors(control2_pca, dims = 1:10)
 control2_clusters <- FindClusters(control2_neighbors, resolution = 0.3)
 
+# Make an UMAP object
 control2_umap <- RunUMAP(control2_clusters, dims = 1:10)
 
+# Plot an UMAP
 DimPlot(
   control2_umap,
   reduction = "umap",
@@ -312,7 +323,7 @@ Uit figuur 10 komt naar voren dat de cellen verdeeld zijn over 12 clusters (0 t/
 ## Celtype annotatie
 **Om te bepalen welke cluster uit welk celtype bestaat, werd er met FindMarkers gekeken welke genen per cluster hoger tot expressie kwamen dan in de andere clusters. Deze genen werden vervolgens gebruikt om de clusters te vergelijken met bekende markergenen, zodat er een interpretatie gegeven kon worden welk celtype bij elk cluster hoorde.**
 
-```{r Markers vinden}
+```{r Find markers }
 # Find the markers for each cluster compared to all remaining cells,
 # report only the positive ones and combine the results
 clusters <- levels(Idents(control2_clusters))
@@ -339,20 +350,19 @@ control2_all_markers <- bind_rows(
   })
 )
 
+# Save all markers as object
 control2_all_markers |>
   group_by(cluster) |>
   filter(avg_log2FC > 1)
 
+# Save only top markers as object
 top_markers <- control2_all_markers |>
   group_by(cluster) |>
   slice_max(avg_log2FC, n = 1)
 ```
 
-Uit de analyse de markergenen komen 9.905 resultaten naar voren, verdeeld over de 12 clusters. Hierbij zijn genen geselecteerd die per cluster hoger tot expressie komen dan in de overige cellen. Om te bepalen bij welke celtypen deze clusters horen, wordt er vervolgens gekeken naar de expressie van bekende markergenen.
-
-**Om te bepalen welke celtypen bij de clusters hoorden, werd er een DotPlot gemaakt met bekende markergenen. Hierbij werd gekeken naar de gemiddelde genexpressie per cluster en het percentage cellen waarin deze genen tot expressie kwamen.**
-
-```{r Genexpressie bekijken}
+```{r Analyzing gene expression }
+# Make a dotplot with all of the marker genes
 DotPlot(
   control2_umap,
   features = c(
@@ -375,7 +385,6 @@ DotPlot(
   group.by = "seurat_clusters"
 ) +
   RotatedAxis()
-
 ```
 **Figuur 11:**
 DotPlot waarin de expressie van bekende markergenen per cluster wordt weergegeven. De grootte van de stippen geeft het percentage cellen aan waarin het gen tot expressie komt en de kleur de gemiddelde geschaalde genexpressie.
@@ -394,10 +403,11 @@ Over het algemeen worden de meeste annotaties ondersteund door de expressie van 
 
 **Na het identificeren van de celtypen werden de clusternummers uit figuur 11 vervangen met de naam van elk celtype. Vervolgens werd er opnieuw een UMAP gemaakt, zodat het een duidelijker geheel zou vormen en de verschillende celtypen van longkankermonster per cluster visueel weergegeven zou worden.**
 
-```{r UMAP met annotaties}
+```{r Annotated UMAP}
 # Set original cluster identities
 Idents(control2_umap) <- "seurat_clusters"
 
+# Assign names to the clusters
 cluster_celltype_labels <- c(
   "0"  = "CD4 T cells",
   "1"  = "CD4 T cells",
@@ -418,8 +428,7 @@ names(cluster_celltype_labels) <- levels(control2_umap)
 
 control2_umap <- RenameIdents(
   control2_umap,
-  cluster_celltype_labels
-)
+  cluster_celltype_labels)
 
 # Visualize annotated clusters
 DimPlot(
@@ -439,9 +448,10 @@ Vooral de CD8 T-cellen zijn belangrijk voor dit onderzoek, aangezien deze later 
 ## Vergelijking
 **Om de celtype-samenstelling van het longkankermonster te vergelijken met een gezond persoon, werd het Seurat-object van control1 ingeladen. Vervolgens werden de clusters voorzien van celtypelabels en werd er een UMAP gemaakt om de verdeling van de celtypen tussen beide monsters te kunnen vergelijken.**
 
-```{r vergelijking}
-control1_clusters <- readRDS("/home/daur2/scrnaseq/pbmc/healthy/control1_filtered_rds/pbmc_control1_clusters.rds")
+## Vergelijking
 
+```{r Comparison}
+# Assigning names to the clusters
 cluster_celltype_labels <- c(
 "0" = "T cells",
 "1" = "CD4 T cells",
@@ -460,6 +470,7 @@ cluster_celltype_labels <- c(
 names(cluster_celltype_labels) <- levels(control1_clusters)
 control1_clusters <- RenameIdents(control1_clusters, cluster_celltype_labels)
 
+# Visualize annotated clusters
 DimPlot(
 control1_clusters,
 reduction = "umap",
@@ -472,40 +483,42 @@ Geannoteerde UMAP van control1 waarbij de verschillende clusters zijn weergegeve
 Uit figuur 13 komt naar voren dat in control1 grotendeels dezelfde celtypen aanwezig zijn als in het longkankermonster. Zo zijn er in beide monsters CD4 T-cellen, CD8 T-cellen, NK-cellen, B-cellen en monocyten te zien. In control1 zijn daarnaast ook bloedplaatjes als aparte groep weergegeven, terwijl in het longkankermonster een groep als overige cellen is geannoteerd.
 De verdeling van de celtypen ziet er in beide UMAPs (figuur 12 en 13) anders uit. Op basis van deze figuren kan er echter niet met zekerheid worden vastgesteld of de verhoudingen tussen de celtypen daadwerkelijk verschillen.
 
+---
+
 ## Differentieel genexpressie (DGE) 
 **Na het vergelijken van de celtypen werd er verder gekeken naar de genexpressie van CD8 T-cellen. Hiervoor werden cluster 3 (CD8 T-cellen) van control1 en clusters 3 en 5 (CD8 T-cellen) van het longkankermonster geselecteerd. Vervolgens werden deze cellen samengevoegd en werd er met FindMarkers een differentiële genexpressieanalyse uitgevoerd om te onderzoeken welke genen hoger of lager tot expressie kwamen tussen beide monsters.**
 ```{r DGE}
 # Dataset control1
 Idents(control1_clusters) <- "seurat_clusters"
-
 control1_clusters <- subset(control1_clusters, idents = "3")
-
 control1_clusters$dataset <- "control1"
-
 
 # Dataset control2
 Idents(control2_clusters) <- "seurat_clusters"
-
 control2_clusters <- subset(control2_clusters, idents = c("3", "5"))
-
 control2_clusters$dataset <- "control2"
 
-# Clusters combineren
+# Combining clusters 
 combined_cluster <- merge(
   control1_clusters,
-  control2_clusters
-)
+  control2_clusters)
 
+# Save different data layers in a Seurat object
 combined_cluster <- JoinLayers(combined_cluster)
 
+# Set the RNA as the assay for the analysis
 DefaultAssay(combined_cluster) <- "RNA"
 
+# Use the dataset as the identity class for comparing
 Idents(combined_cluster) <- "dataset"
 
+# Check the identity groups 
 levels(Idents(combined_cluster))
 
+# Check the number of cells
 table(combined_cluster$dataset)
 
+# Perform DGE between control1 and control2
 dge_cluster <- FindMarkers(
   combined_cluster,
   ident.1 = "control1",
@@ -528,6 +541,8 @@ down_genes <- dge_cluster |>
 background_genes <- rownames(combined_cluster)
 ```
 
+---
+
 ## GO-term enrichment analyse
 
 ```{r GO-term}
@@ -540,6 +555,7 @@ ego_up <- enrichGO(
   ont      = "BP"
 )
 
+# Visualize the GO term analysis for these genes
 dotplot(ego_up)
 
 # Perform GO enrichment analysis for downregulated genes
@@ -551,6 +567,7 @@ ego_down <- enrichGO(
   ont      = "BP"
 )
 
+# Visualize the GO term analysis for these genes
 dotplot(ego_down)
 ```
 
@@ -561,6 +578,8 @@ dotplot(ego_down)
 Let op:
 
 • Grote verschillen zijn niet verwacht tussen twee gezonde controles → bespreek waarom.
+
+---
 
 ## Conclusie
 
