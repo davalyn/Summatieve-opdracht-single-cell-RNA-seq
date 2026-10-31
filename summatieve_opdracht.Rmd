@@ -50,8 +50,7 @@ De verwachting is dat er mogelijk een lager aandeel CD8 T-cellen aanwezig zullen
 ---
 
 ## Kwaliteitscontrole van single-cell data
-
-**Eerst werden de FASTQ en FASTQC rapporten van het kankermonster geanalyseerd. Het bestond uit vier reads genaamd R1, R2, I1 en I2. R1 bevatte de cell barcode en UMI. R2 bevatte de biologische transcript sequentie voor genexpressie analyse. I1 en I2 zijn indexsequenties van illumina die voor sample identificatie dienen.**
+**Eerst werden de FASTQC rapporten van het kankermonster geanalyseerd. Het bestond uit vier reads genaamd R1, R2, I1 en I2. R1 bevatte de cell barcode en UMI. R2 bevatte de biologische transcript sequentie voor genexpressie analyse. I1 en I2 zijn indexsequenties van illumina die voor sample identificatie dienen.**
 
 De readkwaliteit is over het algemeen heel goed. Per base sequence quality heeft in bijna elk monster een Q-score van 30+ (oftewel 99,9% nauwkeurigheid), wat standaard een benchmark is in next-generation sequencing voor base calling nauwkeurigheid. Er zijn 2 posities waar de kwaliteit duidelijk afneemt: bp 1 in monster I2 en bp 61–66 in monster R2. Ondanks deze uitschieters blijven de Q-scores hoger dan respectievelijk 25 en 30.
 
@@ -151,9 +150,9 @@ plot1 + plot2
 **Figuur 6** 
 De scatterplots tonen de verdeling van het aantal UMI's en het percentage mitochondriaal RNA (links) en het aantal gedetecteerde genen (rechts).
 
-Op basis van figuur 5 en 6 is er gekozen voor een ondergrens van 300 en een bovengrens van 6.300 gedetecteerde genen per cel. Hiermee worden cellen met zeer weinig genen en mogelijke doublets uitgesloten. Daarnaast is er gekozen voor een grens vsn 50.000 UMI's, aangezien de scatterplot enkele outliers van hoge aantallen laat zien. Zoals eerder aangegeven is er bij mitochondriale RNA-percentage gekozen voor een grens van 5% omdat de meeste cellen hieronder liggen en alles wat daar boven komt wijst op gestreste of beschadigde cellen. 
+Op basis van figuur 5 en 6 is er gekozen voor een ondergrens van 500 en een bovengrens van 6.000 gedetecteerde genen per cel. Hiermee worden cellen met zeer weinig genen en mogelijke doublets uitgesloten. Daarnaast is er gekozen voor een grens van 30.000 UMI's, aangezien de scatterplot enkele outliers van hoge aantallen laat zien. Zoals eerder aangegeven is er bij mitochondriale RNA-percentage gekozen voor een grens van 5% omdat de meeste cellen hieronder liggen en alles wat daar boven komt wijst op gestreste of beschadigde cellen. 
 
-**De filtergrenzen zijn bepaald en worden ingezet op de dataset zodat de analyse verder kan zonder invloed van de cellen van verminderde kwaliteit**
+**De filtergrenzen werden bepaald en ingezet op de dataset zodat de analyse verder kon zonder invloed van de cellen van verminderde kwaliteit**
 
 ```{r Choose cutoffs }
 
@@ -176,7 +175,7 @@ control2_filtered <- subset(control2, subset = nFeature_RNA > 500 &
 ncol(control2) - ncol(control2_filtered)
 ```
 
-Cellen van verminderde kwaliteit kunnen de downstream analyse van genexpressie en clustering beïnvloeden. Dit kan als gevolg hebben dat CD8 T-cellen mogelijk verkeerd geïdentificeerd worden of verkeerde genexpressies naar voren komen. 
+Na het toepassen van de filtergrenzen zijn er 179 cellen verwijderd. Hierbij blijven er 15.546 cellen over voor verdere analyse. Cellen van verminderde kwaliteit kunnen de downstream analyse van genexpressie en clustering beïnvloeden. Dit kan als gevolg hebben dat CD8 T-cellen mogelijk verkeerd geïdentificeerd worden of verkeerde genexpressies naar voren komen. 
 
 ---
 
@@ -198,12 +197,12 @@ control2_lognorm[["RNA"]] <- JoinLayers(control2_lognorm[["RNA"]])
 head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:10]) 
 ```
 
-• of integratie/batchcorrectie nodig is voor jullie vergelijking, en waarom wel of niet (niet nodig in ons onderzoek, maar we moeten wel kunnen uitleggen wat het is)
+**Voor de afzonderlijke analyse van het longkankermonster werd geen batchcorrectie toegepast, omdat er maar één monster onderzocht werd. Batchcorrectie wordt gebruikt om technische verschillen tussen datasets te verminderen. Denk hierbij aan verschillen in sequencingdiepte, apparatuur of monstervoorbereiding. Omdat control1 pas later werd toegevoegd aan de analysev, konden deze technische verschillen de resultaten mogelijk beïnvloeden.**
 
 ---
 
 ## Highly variable features
-**Na de normalisatie werd een selectie gemaakt van 2.000 genen die het meest variabel zijn. Deze genen bevatten de meeste bruikbare informatie voor de clustering die later zal plaatsvinden. Er is vervolgens ook een plot gemaakt met de tien meest variabele genen en is de data geschaald voor de latere PCA analyse. 
+**Na de normalisatie werd een selectie gemaakt van 2.000 genen die het meest variabel zijn. Deze genen bevatten de meeste bruikbare informatie voor de clustering die later zal plaatsvinden. Er is vervolgens ook een plot gemaakt met de tien meest variabele genen en is de data geschaald voor de latere PCA analyse.**
 
 ```{r Higly variable features}
 # Identify the 2000 most variable features using "vst"
@@ -226,6 +225,8 @@ LabelPoints(plot = plot3, points = top10, repel = TRUE)
 # Scaling of the dataset
 control2_scaled <- ScaleData(control2_vf2000)
 ```
+
+Uit de VariableFeaturePlot komt naar voren dat bepaalde genen een hogere variatie in genexpressie vertonen dan andere genen. Onder de meest variabele genen bevinden zich CXCL8, S100A8, S100A9 en LYZ. (Deze variatie kan bijdragen aan het onderscheiden van verschillende celpopulaties tijdens de PCA en clustering.)
 
 ---
 
@@ -280,21 +281,21 @@ Screeplot van de PCA, waarin het percentage verklaarde variantie per principal c
 
 Uit de screeplot komt naar voren dat de eerste 4 PC's de meeste procentuele varianties weergeven. Tot en met PC 10 is, net zoals bij de elbow plot, een daling te zien.
 
-**Om zeker te weten dat de eerste 4 PC's het meest van invloed zijn, werd er een heatmap gemaakt. Een heatmap weergeeft de screeplot in een visuele manier. Hiermee kan er zeker gesteld worden dat deze PC's een biologische betekenis hebben en dus geen ruis zijn. **
+**Omdat uit de screeplot naar voren kwam dat vooral de eerste 4 PC's veel variantie verklaarden, werd er een heatmap gemaakt om verder naar deze PC's te kijken. Hierbij werden de eerste 10 PC's meegenomen om te onderzoeken welke genen het meest bijdroegen en of er duidelijke verschillen in genexpressie tussen de cellen zichtbaar waren.**
 
 ```{r Heatmap}
 # Plot a heatmap of genes for each PC
 DimHeatmap(control2_pca, dims = 1:10, cells = 500, balanced = TRUE) 
 ```
-
-**Figuur9**
+**Figuur 9:**
 Heatmap van de PCA.
 
-Zoals te zien is zijn er duidelijke blokken te zien tot PC9. PC10 begint hierbij 
+Zoals te zien is in figuur 9 laten de eerste 10 PC's duidelijke verschillen zien in de vorm van kleurblokken. Dit betekent dat er verschillen in genexpressie tussen de cellen zichtbaar zijn en dat ook de latere PC's nog variatie bevatten. Dit ondersteunt de keuze om de eerste 10 PC's mee te nemen in de verdere clustering.
 
 ---
 
 ## Clustering en UMAP
+**Om cellen met vergelijkbare genexpressie bij elkaar te groeperen, werd er een clustering uitgevoerd. Met FindNeighbors werd gekeken welke cellen het meest op elkaar leken op basis van de eerste 10 PC's. Vervolgens werden met FindClusters en een resolutie van 0,3 de clusters bepaald. RunUMAP weergeefd deze clusters in een tweedimensionale plot**
 
 ```{r UMAP}
 # Perform a nearest-neighbor and find clusters
@@ -312,16 +313,15 @@ DimPlot(
   label.size = 5
 )
 ```
+**Figuur 10**
+UMAP van longkanker monster.
 
-• Clusteren cellen?
-
-• Zie je duidelijke subgroepen?
-
-• Herken je het focus-thema (CD8 T cells) in je clusters of patronen? Licht toe.
+Uit figuur 10 komt naar voren dat de cellen verdeeld zijn over 12 clusters (0 t/m 11). Cluster 4, 6 en 10 liggen apart van de rest, terwijl andere clusters dichter bij elkaar liggen. Dit laat zien dat er verschillende groepen cellen aanwezig zijn met overeenkomsten en verschillen in genexpressie.De UMAP alleen is echter nog niet genoeg om vast te stellen welke clusters CD8 T-cellen zijn. Elk cluster heeft een expressie van specifieke genen genaamd markergenen. Dat wordt gedaan door middel van celtype annotatie.
 
 ---
 
 ## Celtype annotatie
+**Om te bepalen welke cluster uit welk celtype bestaat, werd er met FindMarkers gekeken welke genen per cluster hoger tot expressie kwamen dan in de andere clusters. Deze genen werden vervolgens gebruikt om de clusters te vergelijken met bekende markergenen, zodat er een interpretatie gegeven kon worden welk celtype bij elk cluster hoorde.**
 
 ```{r Find markers }
 # Find the markers for each cluster compared to all remaining cells,
@@ -386,33 +386,22 @@ DotPlot(
 ) +
   RotatedAxis()
 ```
+**Figuur 11:**
+DotPlot waarin de expressie van bekende markergenen per cluster wordt weergegeven. De grootte van de stippen geeft het percentage cellen aan waarin het gen tot expressie komt en de kleur de gemiddelde geschaalde genexpressie.
 
 ![**Tabel 2: Clusters en gevonden genen**](figuren/clusters.png){width=70%}
 
+Uit figuur 11 en tabel 2 komt naar voren dat de 12 clusters verschillende celtypen bevatten, die op basis van hun markergenen geïdentificeerd kunnen worden:
 
-Cluster 0 bestaat uit CD4-T-cellen. De expressie van CD3D, CD3E en CD2 wijst op T-cellen. CD4 en IL7R ondersteunen de classificatie als CD4-T-cellen.
+Clusters 0 en 1 zijn geïdentificeerd als CD4 T-cellen. De expressie van CD3D, CD3E en CD2 wijst op T-cellen, terwijl CD4 en IL7R deze classificatie verder ondersteunen. Bij cluster 1 is dezelfde combinatie van markergenen te zien als bij cluster 0. Cluster 2 is geïdentificeerd als B-cellen, aangezien de hoge expressie van MS4A1 en CD79A kenmerkend is voor dit celtype.
+Voor dit onderzoek zijn vooral **clusters 3 en 5** belangrijk, omdat deze als CD8 T-cellen zijn geïdentificeerd. Bij cluster 3 wijst de expressie van CD3D, CD3E en CD2 op T-cellen, terwijl CD8A en CD8B de classificatie als CD8 T-cellen ondersteunen. Daarnaast zijn ook cytotoxische markers zoals GZMB, NKG7 en GNLY aanwezig. Deze markers wijzen op een cytotoxisch profiel, maar komen ook bij NK-cellen voor. Bij cluster 5 is een vergelijkbare combinatie van T-celmarkers, CD8A en CD8B zichtbaar. Ook hier passen NKG7 en GNLY bij een cytotoxisch profiel. Dit maakt beide clusters relevant voor het verdere onderzoek naar cytotoxiciteit bij CD8 T-cellen.
+Cluster 4 is geïdentificeerd als NK-cellen door de expressie van NKG7, GNLY en GZMB. Deze genen zijn betrokken bij cytotoxiciteit en ondersteunen hiermee de classificatie als NK-cellen. Cluster 6 is geclassificeerd als monocyten door de expressie van CD14, LYZ en CST3. Vooral CD14 is hierbij belangrijk, omdat dit een bekende marker is voor monocyten. In de markertabel is ook CD4 bij dit cluster aanwezig. Cluster 7 is voorlopig als NK-cellen geclassificeerd. De grote stippen bij NKG7 en GNLY laten zien dat deze genen in een groot percentage van de cellen tot expressie komen. De aanwezigheid van IL7R maakt deze classificatie echter minder zeker.
+Clusters 8 en 9 zijn, net zoals cluster 2, geïdentificeerd als B-cellen. Bij beide clusters is expressie van MS4A1 en CD79A zichtbaar, wat de classificatie als B-cellen ondersteunt. Cluster 10 kon niet betrouwbaar worden geïdentificeerd, aangezien er geen duidelijke expressie van de onderzochte celidentiteitsmarkers zichtbaar is. Hierdoor blijft het celtype van dit cluster onbekend.
+Cluster 11 is geïdentificeerd als T-cellen door de expressie van CD3D, CD3E en CD2. Daarnaast zijn zowel CD4 als CD8A aanwezig, wat aanwijzingen geeft voor verschillende T-celsubtypen. Ook NKG7 en GNLY komen tot expressie en passen bij een cytotoxisch profiel. Hierdoor kan dit cluster niet duidelijk als CD4 of CD8 T-cellen worden geclassificeerd.
 
-Cluster 1 bestaat eveneens uit CD4-T-cellen. Dezelfde combinatie van T-celmarkers en CD4-markers als bij cluster 0 ondersteunt deze classificatie.
+Over het algemeen worden de meeste annotaties ondersteund door de expressie van meerdere bekende markergenen. Toch zijn niet alle clusters even betrouwbaar geïdentificeerd, omdat sommige markers bij meerdere celtypen voorkomen. Vooral bij clusters 7, 10 en 11 blijven er onzekerhden bestaan. De combinatie van T-celmarkers en CD8-markers bij clusters 3 en 5 ondersteunt de classificatie als CD8 T-cellen. Daarom zijn deze clusters geselecteerd voor de verdere vergelijking met de CD8 T-cellen van control1.
 
-Cluster 2 bestaat uit B-cellen. De hoge expressie van MS4A1 en CD79A is kenmerkend voor B-cellen.
-
-Cluster 3 bestaat uit CD8-T-cellen. De expressie van CD3D, CD3E en CD2 wijst op T-cellen, terwijl CD8A en CD8B aanwijzingen geven voor CD8-T-cellen. NKG7 en GNLY wijzen op een cytotoxisch profiel, maar deze markers komen ook voor bij T-cellen.
-
-Cluster 4 bestaat uit NK-cellen. De expressie van NKG7, GNLY en GZMB ondersteunt deze classificatie.
-
-Cluster 5 bestaat uit CD8-T-cellen. De combinatie van T-celmarkers met CD8A en CD8B ondersteunt deze classificatie. NKG7 en GNLY passen bij cytotoxische activiteit.
-
-Cluster 6 bestaat uit monocyten. De expressie van CD14, LYZ en CST3 ondersteunt deze classificatie. Vooral de expressie van CD14 is hierbij belangrijk.
-
-Cluster 7 is geclassificeerd als NK-cellen. De grote stippen bij NKG7 en GNLY wijzen erop dat deze markers in een groot percentage van de cellen tot expressie komen. De identiteit blijft echter onzeker door de aanwezigheid van IL7R.
-
-Cluster 8 bestaat uit B-cellen. De expressie van MS4A1 en CD79A ondersteunt deze classificatie.
-
-Cluster 9 bestaat eveneens uit B-cellen. Ook hier ondersteunen MS4A1 en CD79A de B-celidentiteit.
-
-Cluster 10 kan niet betrouwbaar worden geclassificeerd. Er is geen duidelijke expressie van de onderzochte celidentiteitsmarkers, waardoor de identiteit niet kan worden vastgesteld.
-
-Cluster 11 bestaat uit T-cellen. De expressie van CD3D, CD3E en CD2 ondersteunt de T-celidentiteit. CD4 en CD8A geven aanwijzingen voor beide subtypen, terwijl NKG7 en GNLY passen bij een cytotoxisch profiel.
+**Na het identificeren van de celtypen werden de clusternummers uit figuur 11 vervangen met de naam van elk celtype. Vervolgens werd er opnieuw een UMAP gemaakt, zodat het een duidelijker geheel zou vormen en de verschillende celtypen van longkankermonster per cluster visueel weergegeven zou worden.**
 
 ```{r Annotated UMAP}
 # Set original cluster identities
@@ -448,12 +437,16 @@ DimPlot(
   label = TRUE,
   pt.size = 0.5) + NoLegend()
 ``` 
+**Figuur 12:**
+Geannoteerde UMAP van het longkankermonster. De verschillende kleuren geven aan welke cellen tot hetzelfde celtype behoren.
 
-• Hoe betrouwbaar vind je de annotaties en waarom?
-
-• Welke celtypes domineren in het kankermonster?
+Uit figuur 12 komt naar voren dat er verschillende celtypen aanwezig zijn in het longkankermonster. Vooral CD4 T-cellen, CD8 T-cellen en B-cellen lijken de grootste groepen te vormen. Daarnaast zijn er ook NK-cellen zichtbaar die een cluster vormen met af en toe geen duidelijke grenzen en de monocyten die duidelijk apart liggen van de overige clusters.
+Vooral de CD8 T-cellen zijn belangrijk voor dit onderzoek, aangezien deze later worden vergeleken met de CD8 T-cellen van control1.
 
 ---
+
+## Vergelijking
+**Om de celtype-samenstelling van het longkankermonster te vergelijken met een gezond persoon, werd het Seurat-object van control1 ingeladen. Vervolgens werden de clusters voorzien van celtypelabels en werd er een UMAP gemaakt om de verdeling van de celtypen tussen beide monsters te kunnen vergelijken.**
 
 ## Vergelijking
 
@@ -484,15 +477,16 @@ reduction = "umap",
 label = TRUE,
 pt.size = 0.5) + NoLegend()
 ```
+**Figuur 13:**
+Geannoteerde UMAP van control1 waarbij de verschillende clusters zijn weergegeven met diens bijbehorende celtypen.
 
-• Zie je dezelfde globale celtypen terug?
-
-• Lijken de verhoudingen tussen celtypen of clusters vergelijkbaar?
+Uit figuur 13 komt naar voren dat in control1 grotendeels dezelfde celtypen aanwezig zijn als in het longkankermonster. Zo zijn er in beide monsters CD4 T-cellen, CD8 T-cellen, NK-cellen, B-cellen en monocyten te zien. In control1 zijn daarnaast ook bloedplaatjes als aparte groep weergegeven, terwijl in het longkankermonster een groep als overige cellen is geannoteerd.
+De verdeling van de celtypen ziet er in beide UMAPs (figuur 12 en 13) anders uit. Op basis van deze figuren kan er echter niet met zekerheid worden vastgesteld of de verhoudingen tussen de celtypen daadwerkelijk verschillen.
 
 ---
 
 ## Differentieel genexpressie (DGE) 
-
+**Na het vergelijken van de celtypen werd er verder gekeken naar de genexpressie van CD8 T-cellen. Hiervoor werden cluster 3 (CD8 T-cellen) van control1 en clusters 3 en 5 (CD8 T-cellen) van het longkankermonster geselecteerd. Vervolgens werden deze cellen samengevoegd en werd er met FindMarkers een differentiële genexpressieanalyse uitgevoerd om te onderzoeken welke genen hoger of lager tot expressie kwamen tussen beide monsters.**
 ```{r DGE}
 # Dataset control1
 Idents(control1_clusters) <- "seurat_clusters"
