@@ -174,14 +174,10 @@ control2_filtered <- subset(control2,
 ncol(control2) - ncol(control2_filtered) # ncol = amount of columns (=cells)
 ```
 
-Na het toepassen van de filtergrenzen zijn er 179 cellen verwijderd. Hierbij blijven er 15.546 cellen over voor verdere analyse. Cellen van verminderde kwaliteit kunnen de downstream analyse van genexpressie en clustering beïnvloeden. Dit kan als gevolg hebben dat CD8 T-cellen mogelijk verkeerd geïdentificeerd worden of verkeerde genexpressies naar voren komen. 
+Na het toepassen van de filtergrenzen zijn er 179 cellen verwijderd, waardoor er 15.546 cellen overblijven voor verdere analyse. Deze filtering is belangrijk, omdat cellen van verminderde kwaliteit de downstream-analyse van genexpressie en clustering negatief kunnen beïnvloeden. Zo kan een te laag aantal gedetecteerde genen wijzen op cellen van lage kwaliteit, terwijl een uitzonderlijk hoog aantal gedetecteerde genen kan duiden op dubbele cellen (doublets). Daarnaast kan een hoog percentage mitochondriaal RNA wijzen op beschadigde of gestreste cellen.
 
-Heel weinig gedetecteerde genen kan wijzen op een cel van lage kwaliteit.
-Heel veel gedetecteerde genen kan wijzen op bijvoorbeeld dubbele cellen (doublets).
+Wanneer cellen van onvoldoende kwaliteit niet worden verwijderd, bestaat het risico dat celtypen, zoals CD8 T-cellen, verkeerd worden geïdentificeerd of dat afwijkende genexpressiepatronen naar voren komen. De gekozen filtergrenzen zijn daarom iets ruimer ingesteld dan de waarden van het 99e percentiel. Hierdoor worden ook cellen die net buiten deze grens vallen niet onnodig verwijderd.
 
-Een hoog percentage mitochondriaal RNA kan wijzen op beschadigde of gestreste cellen.
-
-Iets hogere cutoffs zorgen ervoor dat cellen net boven de 99% niet worden verwijderd
 ---
 
 ## Normalizatie
@@ -190,19 +186,25 @@ Iets hogere cutoffs zorgen ervoor dat cellen net boven de 99% niet worden verwij
 
 ```{r Normalisation}
 # Apply LogNormalize
-control2_lognorm <- NormalizeData(
+control2_lognorm <- NormalizeData( # log (1 +(counts gene / total counts genes in cell)* 10.000)
   object = control2_filtered,  
   normalization.method = "LogNormalize",  
-  scale.factor = 10000)
+  scale.factor = 10000) # standard at LogNormalize (100 = 0,693; 1000 = 2,398; 10.000 = 4,615)
 
-# Adding layers together
-control2_lognorm[["RNA"]] <- JoinLayers(control2_lognorm[["RNA"]])
+# Adding layers Gene expression & Antibody capturing together
+control2_lognorm[["RNA"]] <- JoinLayers(control2_lognorm[["RNA"]]) 
 
 # Check normalized values of the first 10 cells
 head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:10]) 
 ```
 
-**Voor de afzonderlijke analyse van het longkankermonster werd geen batchcorrectie toegepast, omdat er maar één monster onderzocht werd. Batchcorrectie wordt gebruikt om technische verschillen tussen datasets te verminderen. Denk hierbij aan verschillen in sequencingdiepte, apparatuur of monstervoorbereiding. Omdat control1 pas later werd toegevoegd aan de analysev, konden deze technische verschillen de resultaten mogelijk beïnvloeden.**
+Niet iedere cel heeft evenveel totale RNA-counts. Sommige cellen hebben bijvoorbeeld 5.000 UMI-counts, terwijl andere cellen 20.000 UMI-counts hebben.
+
+Hierdoor kunnen de ruwe aantallen genexpressie niet zomaar eerlijk met elkaar vergeleken worden.
+
+Normalisatie corrigeert voor deze verschillen in totale aantallen.
+
+**Voor de afzonderlijke analyse van het longkankermonster werd geen batchcorrectie toegepast, omdat er maar één monster onderzocht werd. Batchcorrectie wordt gebruikt om technische verschillen tussen datasets te verminderen. Denk hierbij aan verschillen in sequencingdiepte, apparatuur of monstervoorbereiding. Omdat control1 pas later werd toegevoegd aan de analyse, konden deze technische verschillen de resultaten mogelijk beïnvloeden.**
 
 ---
 
@@ -210,28 +212,35 @@ head(GetAssayData(control2_lognorm, assay = "RNA", layer = "data")[, 1:10])
 **Na de normalisatie werd een selectie gemaakt van 2.000 genen die het meest variabel zijn. Deze genen bevatten de meeste bruikbare informatie voor de clustering die later zal plaatsvinden. Er is vervolgens ook een plot gemaakt met de tien meest variabele genen en is de data geschaald voor de latere PCA analyse.**
 
 ```{r Higly variable features}
-# Identify the 2000 most variable features using "vst"
+# Identify the 2000 most variable features with "Variance Stabilizing Transformation"
 control2_vf2000 <- FindVariableFeatures(
   control2_lognorm,
-  selection.method = "vst",
-  nfeatures = 2000
-)
+  selection.method = "vst", # relationship between mean expression and variance
+  nfeatures = 2000) # gold standard between meaningful difference and noise
 
 # Inspect the top variable genes
 head(VariableFeatures(control2_vf2000))
 
 # Select the top10 highly variable features
-top10 <- head(VariableFeatures(control2_vf2000), 10)
+top10 <- head(VariableFeatures(control2_vf2000), 10) # the first 10 elements from the list
 
-# Plot the variable features with labels
-plot3 <- VariableFeaturePlot(control2_vf2000)
-LabelPoints(plot = plot3, points = top10, repel = TRUE)
+# Plot the variable features with labels using VariableFeaturePlot
+plot3 <- VariableFeaturePlot(control2_vf2000)  
+LabelPoints(plot = plot3, points = top10, repel = TRUE) # repel = readable names
 
 # Scaling of the dataset
-control2_scaled <- ScaleData(control2_vf2000)
+control2_scaled <- ScaleData(control2_vf2000) # Z-score standardization: 2,4,6 => -1,0,1
 ```
+Niet ieder gen is even informatief. Genen die vrijwel in iedere cel dezelfde expressie hebben, helpen minder goed om verschillende celtypen van elkaar te onderscheiden.
+
+Genen met sterke variatie kunnen juist biologische verschillen tussen celtypen of celtoestanden zichtbaar maken.
 
 Uit de VariableFeaturePlot komt naar voren dat bepaalde genen een hogere variatie in genexpressie vertonen dan andere genen. Onder de meest variabele genen bevinden zich CXCL8, S100A8, S100A9 en LYZ. (Deze variatie kan bijdragen aan het onderscheiden van verschillende celpopulaties tijdens de PCA en clustering.)
+
+
+Scaling is belangrijk voor de volgende stap: PCA (Principal Component Analysis).
+
+Zonder scaling kunnen genen met een grote variatie de PCA onevenredig sterk beïnvloeden. Door de genen te standaardiseren, kunnen verschillen in expressiepatronen beter worden meegenomen.
 
 ---
 
@@ -240,8 +249,8 @@ Uit de VariableFeaturePlot komt naar voren dat bepaalde genen een hogere variati
 **Na het schalen van de dataset werd PCA uitgevoerd om de variaties in genexpressie weer te geven. Dit werd gedaan in PC's. Door middel van elbow plots en een scree plot kon er gekeken worden hoeveel variaties in genexpressie elke PC bevat. Aan de hand van de elbow plot en scree plot kon er een besluit gemaakt worden met hoeveel PC's er verder gewerkt zou worden voor verdere downstream analyse. In dit geval de clustering**
 
 ```{r PCA elbow plot}
-# Calculate Principal components
-control2_pca <- RunPCA(control2_scaled)
+# Run Principal Component Analysis
+control2_pca <- RunPCA(control2_scaled) 
 
 # Plot percentage of variance for each PC
 ElbowPlot(control2_pca)
@@ -252,14 +261,20 @@ Elbow plot van de PC.
 
 De elbowplot laat zien dat PC 1 tot en met 4 de meeste variatie laten zien in standaarddeviatie vanwege de knik die eindigt bij PC 4. Echter is er nog wel een daling te zien tot en met PC 10. Vanaf PC 10 er weinig variatie te constateren.
 
+Als je te weinig PC's gebruikt, kun je belangrijke verschillen tussen cellen missen.
+
+Als je te veel PC's gebruikt, kun je ook relatief weinig informatieve variatie of ruis meenemen.
+
+De Elbow Plot helpt dus bij het kiezen van een geschikt aantal PC's.
+
 **Om een beter overzicht te krijgen hoeveel procent variatie elk punt weergeeft, is er een scree plot gemaakt. Een scree plot laat de variatie in procenten zien in plaats van in standaarddeviatie.**
 
 ```{r PCA scree plot}
-# Extract standard deviations from PCA
+# Extract standard deviations from PCA in control2_pca object
 pca_sd <- control2_pca[["pca"]]@stdev
 
 # Calculate variance per PC (SD²)
-pca_variance <- pca_sd^2
+pca_variance <- pca_sd^2 # Needed for further calculations
 
 # Calculate percentage of explained variance
 pca_variance_percent <- (pca_variance / sum(pca_variance)) * 100
@@ -267,8 +282,7 @@ pca_variance_percent <- (pca_variance / sum(pca_variance)) * 100
 # Store results in a data frame
 pca_df <- data.frame(
   PC = seq_along(pca_variance_percent),
-  PercentVariance = pca_variance_percent
-)
+  PercentVariance = pca_variance_percent)
 
 # Plot a scree plot 
 ggplot(pca_df, aes(x = PC, y = PercentVariance)) +
@@ -290,7 +304,8 @@ Uit de screeplot komt naar voren dat de eerste 4 PC's de meeste procentuele vari
 
 ```{r Heatmap}
 # Plot a heatmap of genes for each PC
-DimHeatmap(control2_pca, dims = 1:10, cells = 500, balanced = TRUE) 
+DimHeatmap(control2_pca, dims = 1:10, 
+           cells = 500, balanced = TRUE) # balanced = selection with high and low scores for balance
 ```
 **Figuur 9:**
 Heatmap van de PCA.
@@ -534,12 +549,12 @@ dge_cluster <- FindMarkers(
 
 # Select significantly upregulated genes in condition B compared to A
 up_genes <- dge_cluster |>
-  filter(p_val_adj < 0.05, avg_log2FC > 2) |>
+  filter(p_val_adj < 0.05, avg_log2FC > 1) |>
   rownames()
 
 # Select significantly downregulated genes in condition B compared to A
 down_genes <- dge_cluster |>
-  filter(p_val_adj < 0.05, avg_log2FC < -2) |>
+  filter(p_val_adj < 0.05, avg_log2FC < -1) |>
   rownames()
 
 # Define the background gene set as all genes detected in the combined cluster
