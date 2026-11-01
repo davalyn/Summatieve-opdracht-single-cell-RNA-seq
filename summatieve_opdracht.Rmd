@@ -587,7 +587,7 @@ Uit de resultaten komt naar voren dat er 2.048 CD8 T-cellen uit control1 en 2.91
 ## GO-term enrichment analyse
 **Om verder te onderzoeken bij welke biologische processen deze genen betrokken zijn, werd er vervolgens een GO-term enrichment analyse uitgevoerd. Hierbij werden de genen met hogere expressie in control1 en het longkankermonster afzonderlijk onderzocht. De gevonden resultaten werden vervolgens weergegeven in twee dotplots.**
 
-```{r GO-term}
+```{r GO-term figuur 14}
 # Perform GO enrichment analysis for upregulated genes
 ego_up <- enrichGO( 
   gene     = up_genes, # Which genes are being used
@@ -598,7 +598,11 @@ ego_up <- enrichGO(
 
 # Visualize the GO term analysis for these genes
 dotplot(ego_up)
+```
+**Figuur 14**
+GO-term enrichment van genen met hogere expressie in control1.
 
+```{r GO-term figuur 15}
 # Perform GO enrichment analysis for downregulated genes
 ego_down <- enrichGO(
   gene     = down_genes, # Which genes are being used
@@ -610,10 +614,6 @@ ego_down <- enrichGO(
 # Visualize the GO term analysis for these genes
 dotplot(ego_down)
 ```
-
-**Figuur 14**
-GO-term enrichment van genen met hogere expressie in control1.
-
 **Figuur 15**
 GO-term enrichment van genen met hogere expressie in het longkankermonster.
 
