@@ -523,26 +523,31 @@ De verdeling van de celtypen ziet er in beide UMAPs (figuur 12 en 13) anders uit
 
 ## Differentieel genexpressie (DGE) 
 **Na het vergelijken van de celtypen werd er verder gekeken naar de genexpressie van CD8 T-cellen. Hiervoor werden cluster 3 (CD8 T-cellen) van control1 en clusters 3 en 5 (CD8 T-cellen) van het longkankermonster geselecteerd. Vervolgens werden deze cellen samengevoegd en werd er met FindMarkers een differentiële genexpressieanalyse uitgevoerd om te onderzoeken welke genen hoger of lager tot expressie kwamen tussen beide monsters.Voor het selecteren van de differentieel tot expressie komende genen werd er een aangepaste p-waarde kleiner dan 0,05 en een absolute log2-fold change groter dan 1 gebruikt.**
+
 ```{r DGE}
 # Dataset control1
 Idents(control1_clusters) <- "seurat_clusters"
+
+# Only select cells from cluster 3 (CD8 T-cells)
 control1_clusters <- subset(control1_clusters, idents = "3")
 control1_clusters$dataset <- "control1"
 
 # Dataset control2
 Idents(control2_clusters) <- "seurat_clusters"
+
+# Select only cells from clusters 3 and 5 (CD8 T-cells)
 control2_clusters <- subset(control2_clusters, idents = c("3", "5"))
 control2_clusters$dataset <- "control2"
 
-# Combining clusters 
+# Combine clusters in a Seurat object
 combined_cluster <- merge(
   control1_clusters,
   control2_clusters)
 
-# Save different data layers in a Seurat object
+# Combine different data layers in one
 combined_cluster <- JoinLayers(combined_cluster)
 
-# Set the RNA as the assay for the analysis
+# Set RNA as the assay for the analysis
 DefaultAssay(combined_cluster) <- "RNA"
 
 # Use the dataset as the identity class for comparing
@@ -555,23 +560,22 @@ levels(Idents(combined_cluster))
 table(combined_cluster$dataset)
 
 # Perform DGE between control1 and control2
-dge_cluster <- FindMarkers(
+dge_cluster <- FindMarkers( # Find genes with different expression levels between two groups
   combined_cluster,
   ident.1 = "control1",
   ident.2 = "control2",
-  min.pct = 0.25,
-  logfc.threshold = 0.25
-)
+  min.pct = 0.25, # Include genes that are expressed in at least 25% of cells in either group
+  logfc.threshold = 0.25) # Include genes with a log2 fold change of at least 0.25
 
 # Genes with higher expression in control1
 up_genes <- dge_cluster |>
   filter(p_val_adj < 0.05, avg_log2FC > 1) |>
-  rownames()
+  rownames() # Show the gene names
 
 # Genes with higher expression in lung cancer
 down_genes <- dge_cluster |>
   filter(p_val_adj < 0.05, avg_log2FC < -1) |>
-  rownames()
+  rownames() # Show the gene names
 
 # Define the background gene set as all genes detected in the combined cluster
 background_genes <- rownames(combined_cluster)
@@ -582,31 +586,31 @@ Uit de resultaten komt naar voren dat er 2.048 CD8 T-cellen uit control1 en 2.91
 
 ## GO-term enrichment analyse
 **Om verder te onderzoeken bij welke biologische processen deze genen betrokken zijn, werd er vervolgens een GO-term enrichment analyse uitgevoerd. Hierbij werden de genen met hogere expressie in control1 en het longkankermonster afzonderlijk onderzocht. De gevonden resultaten werden vervolgens weergegeven in twee dotplots.**
+
 ```{r GO-term}
 # Perform GO enrichment analysis for upregulated genes
-ego_up <- enrichGO(
-  gene     = up_genes,
-  universe = background_genes,
-  OrgDb    = org.Hs.eg.db,
-  keyType  = "SYMBOL",
-  ont      = "BP"
-)
+ego_up <- enrichGO( 
+  gene     = up_genes, # Which genes are being used
+  universe = background_genes, # The background gene set
+  OrgDb    = org.Hs.eg.db, # Humane genome data base used for annotation
+  keyType  = "SYMBOL", # Uses official gene symbols to identify genes
+  ont      = "BP") # Only show the Biological Processes
 
 # Visualize the GO term analysis for these genes
 dotplot(ego_up)
 
 # Perform GO enrichment analysis for downregulated genes
 ego_down <- enrichGO(
-  gene     = down_genes,
-  universe = background_genes,
-  OrgDb    = org.Hs.eg.db,
-  keyType  = "SYMBOL",
-  ont      = "BP"
-)
+  gene     = down_genes, # Which genes are being used
+  universe = background_genes, # The background gene set
+  OrgDb    = org.Hs.eg.db, # Humane genome data base used for annotation
+  keyType  = "SYMBOL", # Uses official gene symbols to identify genes
+  ont      = "BP") # Only show the Biological Processes
 
 # Visualize the GO term analysis for these genes
 dotplot(ego_down)
 ```
+
 **Figuur 14**
 GO-term enrichment van genen met hogere expressie in control1.
 
