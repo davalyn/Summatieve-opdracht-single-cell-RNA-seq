@@ -45,7 +45,7 @@ Single-cell RNA sequencing (scRNA-seq) is een techniek die van individuele celle
 Het doel van deze analyse is om de celtype-samenstelling en genexpressie van PBMC's van een longkanker patiënt te vergelijken met die van een gezond persoon (control1). De nadruk bij deze analyse wordt gelegd op CD8 T-cellen, aangezien deze onderdeel uitmaken van het adaptieve immuunsysteem en betrokken zijn bij het herkennen en vernietigen van cellen met afwijkingen zoals tumorcellen. Dit wordt gedaan door cytotoxische eiwitten en het proces heet cytotoxiciteit. Longkanker kan het immuunsysteem beïnvloeden door de signalen van het immuunsysteem te veranderen. Hierdoor kunnen CD8 T-cellen veranderingen vertonen in hun aantal of expressie van genen.
 Om deze verschillen te onderzoeken wordt een differentiële genexpressie analyse uitgevoerd; een analyse waarbij naar voren komt welke genen in de CD8 T-cellen van de longkanker patiënt hoger of lager tot expressie komen vergeleken met de control1. Er wordt hierbij gekeken naar genen die betrokken zijn bij cytotoxiciteit van CD8 T-cellen.
 
-De verwachting is dat er mogelijk een lager aandeel CD8 T-cellen aanwezig zullen zijn bij de patiënt met longkanker vergeleken met control1 aangezien longkanker de immuunrespons van cytotoxische cellen op een negatieve manier kan beïnvloeden. Een tumor probeert de immuunrespons van cytotoxiciteit te omzeilen, dus er wordt verwacht dat er een negatieve impuls door de longkankercellen gegeven worden aan de CD8 T-cellen. 
+De verwachting is dat er mogelijk een lager aandeel CD8 T-cellen aanwezig zal zijn bij de longkankerpatiënt vergeleken met control1, aangezien longkanker de immuunrespons kan beïnvloeden. Daarnaast wordt verwacht dat er verschillen in genexpressie aanwezig zijn, vooral bij genen die betrokken zijn bij cytotoxiciteit. Dit zou mogelijk kunnen wijzen op een verminderde cytotoxische functie van de CD8 T-cellen bij de longkankerpatiënt.
 
 ---
 
@@ -617,24 +617,29 @@ dotplot(ego_down)
 **Figuur 15**
 GO-term enrichment van genen met hogere expressie in het longkankermonster.
 
-Uit figuur 14 komt naar voren dat de genen met hogere expressie in control1 vooral betrokken zijn bij biologische processen zoals *adaptive immune response*, *regulation of lymphocyte activation* en *T cell receptor signaling pathway*. Deze processen hebben te maken met de immuunrespons en de activatie van T-cellen.
+Uit figuur 14 komt naar voren dat de genen met hogere expressie in control1 vooral betrokken zijn bij biologische processen zoals *adaptive immune response*, *regulation of lymphocyte activation* en *immune response-activating signaling pathway*. Vooral *adaptive immune response* heeft een grote stip en de hoogste GeneRatio. Dit betekent dat relatief veel genen uit de geselecteerde genlijst betrokken zijn bij dit proces. Deze processen hebben vooral te maken met de immuunrespons en de activatie van immuuncellen.
 
-In figuur 15 zijn bij het longkankermonster onder andere *regulation of cellular response to stress*, *post-transcriptional regulation of gene expression* en *regulation of adaptive immune response* verrijkt. Daarnaast komen processen zoals *regulation of lymphocyte activation* en *response to virus* bij beide monsters naar voren.
+Uit figuur 15 komt naar voren dat bij het longkankermonster vooral *regulation of cellular response to stress*, *regulation of lymphocyte activation* en *post-transcriptional regulation of gene expression* verrijkt zijn. Deze processen hebben de grootste stippen en een hoge GeneRatio. Dit laat zien dat relatief veel genen betrokken zijn bij processen rondom stressrespons, lymfocytactivatie en de regulatie van genexpressie. Daarnaast komen *regulation of lymphocyte activation* en *response to virus* in beide figuren naar voren.
 
-• Welke processen zijn verrijkt?
+De resultaten laten zien dat de genen met hogere expressie in beide monsters bij deels verschillende biologische processen betrokken zijn. Toch moet er voorzichtig worden omgegaan met de interpretatie, aangezien de GO-analyse alleen laat zien welke processen verrijkt zijn en niet of deze daadwerkelijk actiever zijn. Hierdoor kan er niet met zekerheid worden vastgesteld of de cytotoxiciteit van CD8 T-cellen is veranderd. Tevens is het zo dat dit onderzoek alleen werkt met twee samples, waardoor gegeneraliseerde interpretaties niet met zekerheid gegeven kunnen worden aangezien de sample size voor dit onderzoek te klein is. 
 
-• Kun je deze verschillen biologisch goed interpreteren, of is voorzichtigheid nodig?
-
-Let op:
-
-• Grote verschillen zijn niet verwacht tussen twee gezonde controles → bespreek waarom.
+Bij twee gezonde controles worden over het algemeen minder grote biologische verschillen verwacht, omdat beide monsters afkomstig zijn van gezonde personen. 
 
 ---
 
 ## Conclusie
 
-• Welke verschillen zie je tussen control1 en long?
+Uit dit onderzoek is naar voren gekomen dat er overeenkomsten en verschillen zijn tussen de PBMC's van de longkankerpatiënt en de gezonde controle (control1). In beide monsters zijn dezelfde celtypen gevonden: CD4 T-cellen, CD8 T-cellen, B-cellen, NK-cellen en monocyten. De verdeling van deze celtypen ziet er in beide UMAPs anders uit, maar alleen de UMAPs zijn niet voldoende om te bekijken of de verhoudingen daadwerkelijk verschillen. De verwachting dat er minder CD8 T-cellen aanwezig zouden zijn bij de longkankerpatiënt kan daarom niet worden bevestigd.
+Bij de verdere analyse is er specifiek gekeken naar CD8 T-cellen. In het longkankermonster zijn clusters 3 en 5 als CD8 T-cellen geïdentificeerd door de expressie van onder andere CD3D, CD3E, CD8A en CD8B. Daarnaast zijn er cytotoxische markers zoals GZMB, NKG7 en GNLY gevonden, deze zijn gematched uit literatuur op een cytotoxisch genexpressieprofiel.
+Uit de differentiële genexpressieanalyse komt naar voren dat er verschillen in genexpressie aanwezig zijn tussen de CD8 T-cellen van beide monsters. Dit sluit aan bij de verwachting dat de genexpressie van deze cellen mogelijk verschilt tussen de longkankerpatiënt en control1. Uit de GO-term enrichment analyse komt naar voren dat de genen met hogere expressie in control1 vooral betrokken zijn bij processen rondom de adaptieve immuunrespons en activatie van immuuncellen. Bij het longkankermonster komen processen rondom stressrespons en de regulatie van genexpressie naar voren.
+Desondanks dat er verschillen in genexpressie zijn gevonden, kan niet worden vastgesteld of de cytotoxiciteit van CD8 T-cellen bij de longkankerpatiënt daadwerkelijk verminderd is, zoals vooraf bij de hypothese werd verwacht: de GO-analyse laat namelijk zien bij welke biologische processen de genen betrokken zijn, maar niet of deze processen daadwerkelijk actiever zijn. 
+Daarnaast is er maar één longkankerpatiënt en één gezonde controle onderzocht, waardoor voorzichtigheid nodig is bij het interpreteren van de resultaten aangezien de sample size daarvoor te klein is en statistische en biologische verschillen hierdoor de resultaten kunnen beïnvloeden.
 
-• Zijn er veranderingen in celtype-samenstelling en of genexpressie?
+Op basis van dit onderzoek kan worden geconcludeerd dat de CD8 T-cellen van de longkankerpatiënt verschillen in genexpressie ten opzichte van de gezonde controle. De resultaten geven echter onvoldoende bewijs om de verwachting van een lager aandeel CD8 T-cellen en een verminderde cytotoxische functie te bevestigen. Verder onderzoek is daarom nodig om vast te stellen wat deze verschillen betekenen voor het immuunsysteem bij longkanker.
 
-• Kun je iets zeggen over het immuunsysteem bij deze Cytotoxic T cells?
+---
+
+## Bronnen
+•⁠  ⁠https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/quantile
+•⁠  ⁠https://pmc.ncbi.nlm.nih.gov/articles/PMC12485375/
+•⁠  ⁠https://lesmaterialen.rstudio.hu.nl/daur2sc-reader/
