@@ -11,12 +11,10 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 ```{r Loading libraries, include=FALSE}
 # Load the libraries
-library(dplyr) # filter(), select(), mutate()
 library(Seurat) # NormalizeData(), RunPCA(), FindMarkers()
 library(tidyverse) # tidyr, readr
 library(patchwork) # combining ggplots
 library(glmGamPoi) # SCTransform()
-library(ggplot2) # Violin-, scatter-, PCA plots
 library(clusterProfiler) # GO-term enrichment
 library(org.Hs.eg.db) # Human's genome database
 library(enrichplot) # GO-term plots
@@ -155,7 +153,7 @@ Op basis van figuur 5 en 6 is er gekozen voor een ondergrens van 500 en een bove
 
 ```{r Choose cutoffs }
 
-# nFeature_RNA: cutoff 500–6000, omdat 99% van de cellen min 740 en max 5178 genen heeft
+# nFeature_RNA: cutoff 500–6000, omdat 99% van de cellen max 5178 genen heeft
 quantile(control2$nFeature_RNA, probs = c(0, 0.25, 0.50, 0.75, 0.99, 1))
 
 # nCount_RNA: cutoff 30000, omdat 99% van de cellen max 24735 UMI counts heeft
@@ -191,7 +189,7 @@ control2_lognorm <- NormalizeData( # log (1 +(counts gene / total counts genes i
   normalization.method = "LogNormalize",  
   scale.factor = 10000) # standard at LogNormalize (100 = 0,693; 1000 = 2,398; 10.000 = 4,615)
 
-# Adding layers Gene expression & Antibody capturing together
+# Adding RNA layers together
 control2_lognorm[["RNA"]] <- JoinLayers(control2_lognorm[["RNA"]]) 
 
 # Check normalized values of the first 10 cells
@@ -231,16 +229,13 @@ LabelPoints(plot = plot3, points = top10, repel = TRUE) # repel = readable names
 # Scaling of the dataset
 control2_scaled <- ScaleData(control2_vf2000) # Z-score standardization: 2,4,6 => -1,0,1
 ```
-Niet ieder gen is even informatief. Genen die vrijwel in iedere cel dezelfde expressie hebben, helpen minder goed om verschillende celtypen van elkaar te onderscheiden.
 
-Genen met sterke variatie kunnen juist biologische verschillen tussen celtypen of celtoestanden zichtbaar maken.
+Niet ieder gen is even informatief. Genen die vrijwel in iedere cel dezelfde expressie hebben, helpen minder goed om verschillende celtypen van elkaar te onderscheiden.Genen met sterke variatie kunnen juist biologische verschillen tussen celtypen of celtoestanden zichtbaar maken.
 
 Uit de VariableFeaturePlot komt naar voren dat bepaalde genen een hogere variatie in genexpressie vertonen dan andere genen. Onder de meest variabele genen bevinden zich CXCL8, S100A8, S100A9 en LYZ. (Deze variatie kan bijdragen aan het onderscheiden van verschillende celpopulaties tijdens de PCA en clustering.)
 
 
-Scaling is belangrijk voor de volgende stap: PCA (Principal Component Analysis).
-
-Zonder scaling kunnen genen met een grote variatie de PCA onevenredig sterk beïnvloeden. Door de genen te standaardiseren, kunnen verschillen in expressiepatronen beter worden meegenomen.
+Scaling is belangrijk voor de volgende stap: PCA (Principal Component Analysis). Zonder scaling kunnen genen met een grote variatie de PCA onevenredig sterk beïnvloeden. Door de genen te standaardiseren, kunnen verschillen in expressiepatronen beter worden meegenomen.
 
 ---
 
@@ -417,22 +412,52 @@ DotPlot(
 **Figuur 11:**
 DotPlot waarin de expressie van bekende markergenen per cluster wordt weergegeven. De grootte van de stippen geeft het percentage cellen aan waarin het gen tot expressie komt en de kleur de gemiddelde geschaalde genexpressie.
 
+
+```{r Violin plot}
+# Make a violin plot
+VlnPlot(control2_umap,
+        features = c("CD3D", "CD8A", "GZMB", "NKG7",
+                     "MS4A1", "CD14"), pt.size = 0) # No points
+```
+
+**Figuur 12:**
+Expressie van 6 markergenen per celcluster weergegeven in een ViolinPlot
+
+```{r Feature plot}
+# Make a feature plot
+FeaturePlot(control2_umap, features = c("CD3D", "CD4", "CD8A", "GZMB"))
+```
+
+**Figuur 13:**
+Verdeling van CD4- en CD8 T-celmarkers over de UMAP weergegeven in een Feature Map 
+
 ![**Tabel 2: Clusters en gevonden genen**](figuren/clusters.png){width=70%}
 
 Uit figuur 11 en tabel 2 komt naar voren dat de 12 clusters verschillende celtypen bevatten, die op basis van hun markergenen geïdentificeerd kunnen worden:
 
-Clusters 0 en 1 zijn geïdentificeerd als CD4 T-cellen. De expressie van CD3D, CD3E en CD2 wijst op T-cellen, terwijl CD4 en IL7R deze classificatie verder ondersteunen. 
-Bij cluster 1 is dezelfde combinatie van markergenen te zien als bij cluster 0. 
-Cluster 2 is geïdentificeerd als B-cellen, aangezien de hoge expressie van MS4A1 en CD79A kenmerkend is voor dit celtype.
+• Clusters 0 en 1 zijn geïdentificeerd als CD4 T-cellen. De expressie van CD3D, CD3E en CD2 wijst op T-cellen, terwijl CD4 en IL7R deze classificatie verder ondersteunen. 
+
+• Bij cluster 1 is dezelfde combinatie van markergenen te zien als bij cluster 0. 
+
+• Cluster 2 is geïdentificeerd als B-cellen, aangezien de hoge expressie van MS4A1 en CD79A kenmerkend is voor dit celtype.
+
 Voor dit onderzoek zijn vooral **clusters 3 en 5** belangrijk, omdat deze als CD8 T-cellen zijn geïdentificeerd. 
-Bij cluster 3 wijst de expressie van CD3D, CD3E en CD2 op T-cellen, terwijl CD8A en CD8B de classificatie als CD8 T-cellen ondersteunen. Daarnaast zijn ook cytotoxische markers zoals GZMB, NKG7 en GNLY aanwezig. Deze markers wijzen op een cytotoxisch profiel, maar komen ook bij NK-cellen voor. 
-Bij cluster 5 is een vergelijkbare combinatie van T-celmarkers, CD8A en CD8B zichtbaar. Ook hier passen NKG7 en GNLY bij een cytotoxisch profiel. Dit maakt beide clusters relevant voor het verdere onderzoek naar cytotoxiciteit bij CD8 T-cellen.
-Cluster 4 is geïdentificeerd als NK-cellen door de expressie van NKG7, GNLY en GZMB. Deze genen zijn betrokken bij cytotoxiciteit en ondersteunen hiermee de classificatie als NK-cellen. 
-Cluster 6 is geclassificeerd als monocyten door de expressie van CD14, LYZ en CST3. Vooral CD14 is hierbij belangrijk, omdat dit een bekende marker is voor monocyten. In de markertabel is ook CD4 bij dit cluster aanwezig. 
-Cluster 7 is voorlopig als NK-cellen geclassificeerd. De grote stippen bij NKG7 en GNLY laten zien dat deze genen in een groot percentage van de cellen tot expressie komen. De aanwezigheid van IL7R maakt deze classificatie echter minder zeker.
-Clusters 8 en 9 zijn, net zoals cluster 2, geïdentificeerd als B-cellen. Bij beide clusters is expressie van MS4A1 en CD79A zichtbaar, wat de classificatie als B-cellen ondersteunt. 
-Cluster 10 kon niet betrouwbaar worden geïdentificeerd, aangezien er geen duidelijke expressie van de onderzochte celidentiteitsmarkers zichtbaar is. Hierdoor blijft het celtype van dit cluster onbekend.
-Cluster 11 is geïdentificeerd als T-cellen door de expressie van CD3D, CD3E en CD2. Daarnaast zijn zowel CD4 als CD8A aanwezig, wat aanwijzingen geeft voor verschillende T-celsubtypen. Ook NKG7 en GNLY komen tot expressie en passen bij een cytotoxisch profiel. Hierdoor kan dit cluster niet duidelijk als CD4 of CD8 T-cellen worden geclassificeerd.
+
+• Bij cluster 3 wijst de expressie van CD3D, CD3E en CD2 op T-cellen, terwijl CD8A en CD8B de classificatie als CD8 T-cellen ondersteunen. Daarnaast zijn ook cytotoxische markers zoals GZMB, NKG7 en GNLY aanwezig. Deze markers wijzen op een cytotoxisch profiel, maar komen ook bij NK-cellen voor. 
+
+• Cluster 4 is geïdentificeerd als NK-cellen door de expressie van NKG7, GNLY en GZMB. Deze genen zijn betrokken bij cytotoxiciteit en ondersteunen hiermee de classificatie als NK-cellen. 
+
+• Bij cluster 5 is een vergelijkbare combinatie van T-celmarkers, CD8A en CD8B zichtbaar. Ook hier passen NKG7 en GNLY bij een cytotoxisch profiel. Dit maakt beide clusters relevant voor het verdere onderzoek naar cytotoxiciteit bij CD8 T-cellen.
+
+• Cluster 6 is geclassificeerd als monocyten door de expressie van CD14, LYZ en CST3. Vooral CD14 is hierbij belangrijk, omdat dit een bekende marker is voor monocyten. In de markertabel is ook CD4 bij dit cluster aanwezig. 
+
+• Cluster 7 is voorlopig als NK-cellen geclassificeerd. De grote stippen bij NKG7 en GNLY laten zien dat deze genen in een groot percentage van de cellen tot expressie komen. De aanwezigheid van IL7R maakt deze classificatie echter minder zeker.
+
+• Clusters 8 en 9 zijn, net zoals cluster 2, geïdentificeerd als B-cellen. Bij beide clusters is expressie van MS4A1 en CD79A zichtbaar, wat de classificatie als B-cellen ondersteunt. 
+
+• Cluster 10 kon niet betrouwbaar worden geïdentificeerd, aangezien er geen duidelijke expressie van de onderzochte celidentiteitsmarkers zichtbaar is. Hierdoor blijft het celtype van dit cluster onbekend.
+
+• Cluster 11 is geïdentificeerd als T-cellen door de expressie van CD3D, CD3E en CD2. Daarnaast zijn zowel CD4 als CD8A aanwezig, wat aanwijzingen geeft voor verschillende T-celsubtypen. Ook NKG7 en GNLY komen tot expressie en passen bij een cytotoxisch profiel. Hierdoor kan dit cluster niet duidelijk als CD4 of CD8 T-cellen worden geclassificeerd.
 
 Over het algemeen worden de meeste annotaties ondersteund door de expressie van meerdere bekende markergenen. Toch zijn niet alle clusters even betrouwbaar geïdentificeerd, omdat sommige markers bij meerdere celtypen voorkomen. Vooral bij clusters 7, 10 en 11 blijven er onzekerhden bestaan. De combinatie van T-celmarkers en CD8-markers bij clusters 3 en 5 ondersteunt de classificatie als CD8 T-cellen. Daarom zijn deze clusters geselecteerd voor de verdere vergelijking met de CD8 T-cellen van control1.
 
@@ -455,8 +480,7 @@ cluster_celltype_labels <- c(
   "8"  = "B cells",
   "9"  = "B cells",
   "10" = "Other cells",
-  "11" = "T cells"
-)
+  "11" = "T cells")
 
 # Match cluster names with their corresponding cell type labels
 names(cluster_celltype_labels) <- levels(control2_umap)
@@ -472,10 +496,10 @@ DimPlot(
   label.size = 4.5) 
 ``` 
 
-**Figuur 12:**
+**Figuur 14:**
 Geannoteerde UMAP van het longkankermonster. De verschillende kleuren geven aan welke cellen tot hetzelfde celtype behoren.
 
-Uit figuur 12 komt naar voren dat er verschillende celtypen aanwezig zijn in het longkankermonster. Vooral CD4 T-cellen, CD8 T-cellen en B-cellen lijken de grootste groepen te vormen. Daarnaast zijn er ook NK-cellen zichtbaar die een cluster vormen met af en toe geen duidelijke grenzen en de monocyten die duidelijk apart liggen van de overige clusters.
+Uit figuur 14 komt naar voren dat er verschillende celtypen aanwezig zijn in het longkankermonster. Vooral CD4 T-cellen, CD8 T-cellen en B-cellen lijken de grootste groepen te vormen. Daarnaast zijn er ook NK-cellen zichtbaar die een cluster vormen met af en toe geen duidelijke grenzen en de monocyten die duidelijk apart liggen van de overige clusters.
 Vooral de CD8 T-cellen zijn belangrijk voor dit onderzoek, aangezien deze later worden vergeleken met de CD8 T-cellen van control1.
 
 ---
@@ -513,11 +537,11 @@ label = TRUE,
 label.size = 4.5) 
 ```
 
-**Figuur 13:**
+**Figuur 15:**
 Geannoteerde UMAP van control1 waarbij de verschillende clusters zijn weergegeven met diens bijbehorende celtypen.
 
-Uit figuur 13 komt naar voren dat in control1 grotendeels dezelfde celtypen aanwezig zijn als in het longkankermonster. Zo zijn er in beide monsters CD4 T-cellen, CD8 T-cellen, NK-cellen, B-cellen en monocyten te zien. In control1 zijn daarnaast ook bloedplaatjes als aparte groep weergegeven, terwijl in het longkankermonster een groep als overige cellen is geannoteerd.
-De verdeling van de celtypen ziet er in beide UMAPs (figuur 12 en 13) anders uit. Op basis van deze figuren kan er echter niet met zekerheid worden vastgesteld of de verhoudingen tussen de celtypen daadwerkelijk verschillen.
+Uit figuur 15 komt naar voren dat in control1 grotendeels dezelfde celtypen aanwezig zijn als in het longkankermonster. Zo zijn er in beide monsters CD4 T-cellen, CD8 T-cellen, NK-cellen, B-cellen en monocyten te zien. In control1 zijn daarnaast ook bloedplaatjes als aparte groep weergegeven, terwijl in het longkankermonster een groep als overige cellen is geannoteerd.
+De verdeling van de celtypen ziet er in beide UMAPs (figuur 14 en 15) anders uit. Op basis van deze figuren kan er echter niet met zekerheid worden vastgesteld of de verhoudingen tussen de celtypen daadwerkelijk verschillen.
 
 ---
 
@@ -580,6 +604,7 @@ down_genes <- dge_cluster |>
 # Define the background gene set as all genes detected in the combined cluster
 background_genes <- rownames(combined_cluster)
 ```
+
 Uit de resultaten komt naar voren dat er 2.048 CD8 T-cellen uit control1 en 2.917 CD8 T-cellen uit het longkankermonster zijn geselecteerd voor de DGE-analyse. Hierbij wordt er onderscheid gemaakt tussen genen die hoger tot expressie komen in control1 en genen die hoger tot expressie komen in het longkankermonster.
 
 ---
@@ -587,7 +612,7 @@ Uit de resultaten komt naar voren dat er 2.048 CD8 T-cellen uit control1 en 2.91
 ## GO-term enrichment analyse
 **Om verder te onderzoeken bij welke biologische processen deze genen betrokken zijn, werd er vervolgens een GO-term enrichment analyse uitgevoerd. Hierbij werden de genen met hogere expressie in control1 en het longkankermonster afzonderlijk onderzocht. De gevonden resultaten werden vervolgens weergegeven in twee dotplots.**
 
-```{r GO-term figuur 14}
+```{r GO-term figuur 16}
 # Perform GO enrichment analysis for upregulated genes
 ego_up <- enrichGO( 
   gene     = up_genes, # Which genes are being used
@@ -599,10 +624,13 @@ ego_up <- enrichGO(
 # Visualize the GO term analysis for these genes
 dotplot(ego_up)
 ```
-**Figuur 14**
+
+**Figuur 16**
 GO-term enrichment van genen met hogere expressie in control1.
 
-```{r GO-term figuur 15}
+Uit figuur 16 komt naar voren dat de genen met hogere expressie in control1 vooral betrokken zijn bij biologische processen zoals *adaptive immune response*, *regulation of lymphocyte activation* en *immune response-activating signaling pathway*. Vooral *adaptive immune response* heeft een grote stip en de hoogste GeneRatio. Dit betekent dat relatief veel genen uit de geselecteerde genlijst betrokken zijn bij dit proces. Deze processen hebben vooral te maken met de immuunrespons en de activatie van immuuncellen.
+
+```{r GO-term figuur 17}
 # Perform GO enrichment analysis for downregulated genes
 ego_down <- enrichGO(
   gene     = down_genes, # Which genes are being used
@@ -614,12 +642,11 @@ ego_down <- enrichGO(
 # Visualize the GO term analysis for these genes
 dotplot(ego_down)
 ```
-**Figuur 15**
+
+**Figuur 17**
 GO-term enrichment van genen met hogere expressie in het longkankermonster.
 
-Uit figuur 14 komt naar voren dat de genen met hogere expressie in control1 vooral betrokken zijn bij biologische processen zoals *adaptive immune response*, *regulation of lymphocyte activation* en *immune response-activating signaling pathway*. Vooral *adaptive immune response* heeft een grote stip en de hoogste GeneRatio. Dit betekent dat relatief veel genen uit de geselecteerde genlijst betrokken zijn bij dit proces. Deze processen hebben vooral te maken met de immuunrespons en de activatie van immuuncellen.
-
-Uit figuur 15 komt naar voren dat bij het longkankermonster vooral *regulation of cellular response to stress*, *regulation of lymphocyte activation* en *post-transcriptional regulation of gene expression* verrijkt zijn. Deze processen hebben de grootste stippen en een hoge GeneRatio. Dit laat zien dat relatief veel genen betrokken zijn bij processen rondom stressrespons, lymfocytactivatie en de regulatie van genexpressie. Daarnaast komen *regulation of lymphocyte activation* en *response to virus* in beide figuren naar voren.
+Uit figuur 17 komt naar voren dat bij het longkankermonster vooral *regulation of cellular response to stress*, *regulation of lymphocyte activation* en *post-transcriptional regulation of gene expression* verrijkt zijn. Deze processen hebben de grootste stippen en een hoge GeneRatio. Dit laat zien dat relatief veel genen betrokken zijn bij processen rondom stressrespons, lymfocytactivatie en de regulatie van genexpressie. Daarnaast komen *regulation of lymphocyte activation* en *response to virus* in beide figuren naar voren.
 
 De resultaten laten zien dat de genen met hogere expressie in beide monsters bij deels verschillende biologische processen betrokken zijn. Toch moet er voorzichtig worden omgegaan met de interpretatie, aangezien de GO-analyse alleen laat zien welke processen verrijkt zijn en niet of deze daadwerkelijk actiever zijn. Hierdoor kan er niet met zekerheid worden vastgesteld of de cytotoxiciteit van CD8 T-cellen is veranderd. Tevens is het zo dat dit onderzoek alleen werkt met twee samples, waardoor gegeneraliseerde interpretaties niet met zekerheid gegeven kunnen worden aangezien de sample size voor dit onderzoek te klein is. 
 
@@ -630,9 +657,13 @@ Bij twee gezonde controles worden over het algemeen minder grote biologische ver
 ## Conclusie
 
 Uit dit onderzoek is naar voren gekomen dat er overeenkomsten en verschillen zijn tussen de PBMC's van de longkankerpatiënt en de gezonde controle (control1). In beide monsters zijn dezelfde celtypen gevonden: CD4 T-cellen, CD8 T-cellen, B-cellen, NK-cellen en monocyten. De verdeling van deze celtypen ziet er in beide UMAPs anders uit, maar alleen de UMAPs zijn niet voldoende om te bekijken of de verhoudingen daadwerkelijk verschillen. De verwachting dat er minder CD8 T-cellen aanwezig zouden zijn bij de longkankerpatiënt kan daarom niet worden bevestigd.
+
 Bij de verdere analyse is er specifiek gekeken naar CD8 T-cellen. In het longkankermonster zijn clusters 3 en 5 als CD8 T-cellen geïdentificeerd door de expressie van onder andere CD3D, CD3E, CD8A en CD8B. Daarnaast zijn er cytotoxische markers zoals GZMB, NKG7 en GNLY gevonden, deze zijn gematched uit literatuur op een cytotoxisch genexpressieprofiel.
+
 Uit de differentiële genexpressieanalyse komt naar voren dat er verschillen in genexpressie aanwezig zijn tussen de CD8 T-cellen van beide monsters. Dit sluit aan bij de verwachting dat de genexpressie van deze cellen mogelijk verschilt tussen de longkankerpatiënt en control1. Uit de GO-term enrichment analyse komt naar voren dat de genen met hogere expressie in control1 vooral betrokken zijn bij processen rondom de adaptieve immuunrespons en activatie van immuuncellen. Bij het longkankermonster komen processen rondom stressrespons en de regulatie van genexpressie naar voren.
+
 Desondanks dat er verschillen in genexpressie zijn gevonden, kan niet worden vastgesteld of de cytotoxiciteit van CD8 T-cellen bij de longkankerpatiënt daadwerkelijk verminderd is, zoals vooraf bij de hypothese werd verwacht: de GO-analyse laat namelijk zien bij welke biologische processen de genen betrokken zijn, maar niet of deze processen daadwerkelijk actiever zijn. 
+
 Daarnaast is er maar één longkankerpatiënt en één gezonde controle onderzocht, waardoor voorzichtigheid nodig is bij het interpreteren van de resultaten aangezien de sample size daarvoor te klein is en statistische en biologische verschillen hierdoor de resultaten kunnen beïnvloeden.
 
 Op basis van dit onderzoek kan worden geconcludeerd dat de CD8 T-cellen van de longkankerpatiënt verschillen in genexpressie ten opzichte van de gezonde controle. De resultaten geven echter onvoldoende bewijs om de verwachting van een lager aandeel CD8 T-cellen en een verminderde cytotoxische functie te bevestigen. Verder onderzoek is daarom nodig om vast te stellen wat deze verschillen betekenen voor het immuunsysteem bij longkanker.
@@ -640,6 +671,9 @@ Op basis van dit onderzoek kan worden geconcludeerd dat de CD8 T-cellen van de l
 ---
 
 ## Bronnen
+
 •⁠  ⁠https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/quantile
+
 •⁠  ⁠https://pmc.ncbi.nlm.nih.gov/articles/PMC12485375/
+
 •⁠  ⁠https://lesmaterialen.rstudio.hu.nl/daur2sc-reader/
